@@ -17,13 +17,35 @@ export interface BlueskyImage {
   };
 }
 
-export interface BlueskyEmbed {
-  images?: BlueskyImage[];
-  $type?: string;
+// Embed types - using union type for different embed kinds
+export interface BlueskyImageEmbed {
+  $type: "app.bsky.embed.images";
+  images: BlueskyImage[];
 }
 
+export interface BlueskyExternalEmbed {
+  $type: "app.bsky.embed.external";
+  external: any;
+}
+
+export interface BlueskyRecordEmbed {
+  $type: "app.bsky.embed.record";
+  record: any;
+}
+
+export type BlueskyEmbed =
+  | BlueskyImageEmbed
+  | BlueskyExternalEmbed
+  | BlueskyRecordEmbed
+  | {
+      $type?: string;
+      images?: BlueskyImage[];
+      external?: any;
+      record?: any;
+    };
+
 export interface BlueskyRecord {
-  text: string;
+  text?: string;
   createdAt?: string;
   $type?: string;
 }
