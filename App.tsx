@@ -9,6 +9,8 @@ import {
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import BottomTabNavigator from "./src/navigation/BottomTabNavigator";
+import { BoardProvider } from "./src/contexts/BoardContext";
+// Global state provider for board-related data
 
 SplashScreen.preventAutoHideAsync();
 
@@ -31,8 +33,10 @@ export default function App() {
   }
 
   return (
-    <NavigationContainer>
-      <BottomTabNavigator />
-    </NavigationContainer>
+    <BoardProvider>
+      <NavigationContainer>
+        <BottomTabNavigator />
+      </NavigationContainer>
+    </BoardProvider>
   );
 }
