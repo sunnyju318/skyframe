@@ -1,5 +1,3 @@
-// Tailwind CSS configuration - defines design tokens (colors, fonts, spacing)
-
 // Tailwind configuration for SkyFrame design system
 /** @type {import('tailwindcss').Config} */
 module.exports = {
@@ -40,16 +38,38 @@ module.exports = {
         // Poppins font family
         sans: ["Poppins", "sans-serif"],
       },
+      fontWeight: {
+        // Poppins weights
+        regular: "400",
+        medium: "500",
+        semibold: "600",
+        bold: "700",
+      },
       fontSize: {
         // Typography scale
-        display: ["32px", { lineHeight: "40px", letterSpacing: "-0.5px" }],
-        h1: ["24px", { lineHeight: "32px", letterSpacing: "-0.3px" }],
-        h2: ["20px", { lineHeight: "28px", letterSpacing: "-0.2px" }],
-        h3: ["18px", { lineHeight: "24px" }],
-        body: ["16px", { lineHeight: "24px" }],
-        "body-semibold": ["16px", { lineHeight: "24px" }],
-        "body-small": ["14px", { lineHeight: "20px", letterSpacing: "0.1px" }],
-        caption: ["12px", { lineHeight: "16px", letterSpacing: "0.2px" }],
+        display: [
+          "32px",
+          { lineHeight: "40px", letterSpacing: "-0.5px", fontWeight: "700" },
+        ],
+        h1: [
+          "24px",
+          { lineHeight: "32px", letterSpacing: "-0.3px", fontWeight: "600" },
+        ],
+        h2: [
+          "20px",
+          { lineHeight: "28px", letterSpacing: "-0.2px", fontWeight: "600" },
+        ],
+        h3: ["18px", { lineHeight: "24px", fontWeight: "500" }],
+        body: ["16px", { lineHeight: "24px", fontWeight: "400" }],
+        "body-semibold": ["16px", { lineHeight: "24px", fontWeight: "600" }],
+        "body-small": [
+          "14px",
+          { lineHeight: "20px", letterSpacing: "0.1px", fontWeight: "400" },
+        ],
+        caption: [
+          "12px",
+          { lineHeight: "16px", letterSpacing: "0.2px", fontWeight: "500" },
+        ],
       },
       spacing: {
         // 4px-based spacing system
@@ -66,6 +86,18 @@ module.exports = {
         40: "40px",
         60: "60px",
         58: "58px",
+      },
+      borderRadius: {
+        // Custom radius values from design system
+        none: "0",
+        sm: "4px",
+        DEFAULT: "8px",
+        md: "8px",
+        lg: "10px",
+        xl: "14px",
+        20: "20px",
+        30: "30px",
+        full: "9999px",
       },
     },
   },
