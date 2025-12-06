@@ -1,5 +1,4 @@
-import { StatusBar } from "expo-status-bar";
-import { Text, View } from "react-native";
+import { NavigationContainer } from "@react-navigation/native";
 import {
   useFonts,
   Poppins_400Regular,
@@ -9,8 +8,8 @@ import {
 } from "@expo-google-fonts/poppins";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
+import BottomTabNavigator from "./src/navigation/BottomTabNavigator";
 
-// Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
 
 export default function App() {
@@ -32,9 +31,8 @@ export default function App() {
   }
 
   return (
-    <View className="flex-1 items-center justify-center bg-primary-500">
-      <Text className="text-white text-h1 font-semibold">SkyFrame 🎨</Text>
-      <StatusBar style="auto" />
-    </View>
+    <NavigationContainer>
+      <BottomTabNavigator />
+    </NavigationContainer>
   );
 }
