@@ -1,3 +1,7 @@
+// ============================================================================
+// Search Screen — Trending, Categories, and Search Results
+// ============================================================================
+
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -6,12 +10,21 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   ScrollView,
+  Image,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import MasonryList from "@react-native-seoul/masonry-list";
-import { searchPosts, getTrendingHashtags } from "../services/blueskyApi";
+import {
+  searchPosts,
+  getTrendingHashtags,
+  getPopularCategories,
+} from "../services/blueskyApi";
 import { BlueskyPost } from "../types";
 import PostCard from "../components/PostCard";
+
+// ============================================================================
+// Component State & Mode
+// ============================================================================
 
 export default function SearchScreen() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -24,11 +37,24 @@ export default function SearchScreen() {
   const [cursor, setCursor] = useState<string | undefined>(undefined);
   const [loadingMore, setLoadingMore] = useState(false);
   const [relatedTags, setRelatedTags] = useState<string[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [categoryPosts, setCategoryPosts] = useState<
+    Record<string, BlueskyPost[]>
+  >({});
+  const [loadingCategories, setLoadingCategories] = useState(true);
 
-  // Load trending tags on mount
+  // ========================================================================
+  // Initial Data Load (Trending tags + Category sections)
+  // ========================================================================
+
   useEffect(() => {
     loadTrendingTags();
+    loadCategoryPosts();
   }, []);
+
+  // ========================================================================
+  // Trending Hashtags
+  // ========================================================================
 
   const loadTrendingTags = async () => {
     try {
@@ -38,6 +64,42 @@ export default function SearchScreen() {
       console.error("Error loading trending tags:", error);
     }
   };
+
+  // ========================================================================
+  // Category Sections (Discover mode)
+  // ========================================================================
+  // Load popular categories and fetch 7 preview posts for each in parallel
+
+  const loadCategoryPosts = async () => {
+    setLoadingCategories(true);
+
+    try {
+      const popularCategories = await getPopularCategories();
+      setCategories(popularCategories);
+
+      const searchPromises = popularCategories.map(async (category) => {
+        const response = await searchPosts(category);
+        return { category, posts: response.posts.slice(0, 7) };
+      });
+
+      const results = await Promise.all(searchPromises);
+
+      const categoryData: Record<string, BlueskyPost[]> = {};
+      results.forEach(({ category, posts }) => {
+        categoryData[category] = posts;
+      });
+
+      setCategoryPosts(categoryData);
+    } catch (error) {
+      console.error("Error loading categories:", error);
+    } finally {
+      setLoadingCategories(false);
+    }
+  };
+
+  // ========================================================================
+  // Related Tags Extraction (from search results)
+  // ========================================================================
 
   const extractRelatedTags = (posts: BlueskyPost[]) => {
     const tagCounts = new Map<string, number>();
@@ -51,6 +113,7 @@ export default function SearchScreen() {
       hashtags.forEach((tag) => {
         const cleanTag = tag.slice(1).toLowerCase();
 
+        // Skip the original search query
         if (cleanTag === searchQuery.toLowerCase()) return;
 
         tagCounts.set(cleanTag, (tagCounts.get(cleanTag) || 0) + 1);
@@ -64,6 +127,10 @@ export default function SearchScreen() {
 
     setRelatedTags(related);
   };
+
+  // ========================================================================
+  // Search Logic (initial search + mode toggle)
+  // ========================================================================
 
   const handleSearch = async (query: string) => {
     if (!query.trim()) return;
@@ -84,6 +151,10 @@ export default function SearchScreen() {
       setLoading(false);
     }
   };
+
+  // ========================================================================
+  // Load More Results (infinite scroll)
+  // ========================================================================
 
   const loadMoreResults = async () => {
     if (loadingMore || !cursor || !searchQuery.trim()) return;
@@ -109,17 +180,25 @@ export default function SearchScreen() {
     }
   };
 
+  // ========================================================================
+  // Clear Search & Reset to Discover Mode
+  // ========================================================================
+
   const clearSearch = () => {
     setSearchQuery("");
     setSearchResults([]);
     setSearchMode("discover");
   };
 
+  // ========================================================================
+  // Masonry Render Item (wrap post into feedItem for PostCard)
+  // ========================================================================
+
   const renderItem = ({ item, i }: { item: any; i: number }) => {
     const post = item as BlueskyPost;
     const isLeftColumn = i % 2 === 0;
 
-    // Convert BlueskyPost to BlueskyFeedItem format
+    // Minimal BlueskyFeedItem-like structure for PostCard
     const feedItem = {
       post: post,
     };
@@ -127,23 +206,30 @@ export default function SearchScreen() {
     return <PostCard feedItem={feedItem} isLeftColumn={isLeftColumn} />;
   };
 
+  // ========================================================================
+  // UI — Layout & Sections
+  // ========================================================================
+
   return (
-    <View className="flex-1 bg-gray-50">
-      {/* Header with SearchBar */}
-      <View className="bg-white border-b border-gray-200 pt-58 pb-16 px-16">
+    <View className="flex-1 bg-white">
+      {/* ================================================================
+          🔹 Header with Search Bar
+          ================================================================ */}
+      <View className="pt-58 pb-12 px-16">
         <View className="flex-row items-center gap-12">
-          {/* Back Button  */}
+          {/* Back Button (only in results mode) */}
           {searchMode === "results" && (
             <TouchableOpacity onPress={clearSearch}>
-              <Feather name="arrow-left" size={24} color="#343434" />
+              <Feather name="chevron-left" size={30} color="#343434" />
             </TouchableOpacity>
           )}
 
-          {/* SearchBar */}
-          <View className="flex-1 flex-row items-center bg-gray-50 rounded-lg px-12 py-8">
+          {/* Search Bar */}
+          <View className="flex-1 flex-row items-center bg-gray-100 rounded-30 px-16 py-8">
             <TextInput
-              className="flex-1 text-body"
-              placeholder="What can you make?"
+              className="flex-1 text-body font-semibold text-gray-700"
+              placeholder="What's on your mind?'"
+              placeholderTextColor="#9CA3AF"
               value={searchQuery}
               onChangeText={setSearchQuery}
               onSubmitEditing={() => handleSearch(searchQuery)}
@@ -151,48 +237,135 @@ export default function SearchScreen() {
             />
             {searchQuery.length > 0 ? (
               <TouchableOpacity onPress={clearSearch}>
-                <Feather name="x" size={20} color="#6C757D" />
+                <Feather name="x" size={22} color="#9CA3AF" />
               </TouchableOpacity>
             ) : (
-              <Feather name="search" size={20} color="#6C757D" />
+              <Feather name="search" size={22} color="#9CA3AF" />
             )}
           </View>
         </View>
 
-        {/* Related Search Tags */}
-        {searchMode === "results" &&
-          relatedTags.length > 0 && ( // ← relatedTags로 변경
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              className="mt-12"
-              contentContainerStyle={{ gap: 8 }}
-            >
-              {relatedTags.map(
-                (
-                  tag // ← relatedTags로 변경
-                ) => (
-                  <TouchableOpacity
-                    key={tag}
-                    className="bg-white border border-gray-300 rounded-full px-16 py-8"
-                    onPress={() => handleSearch(tag)}
-                  >
-                    <Text className="text-body-small text-gray-700">{tag}</Text>
-                  </TouchableOpacity>
-                )
-              )}
-            </ScrollView>
-          )}
+        {/* Related search tags (chips under the search bar) */}
+        {searchMode === "results" && relatedTags.length > 0 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            className="mt-20"
+            contentContainerStyle={{ gap: 8 }}
+          >
+            {relatedTags.map((tag) => (
+              <TouchableOpacity
+                key={tag}
+                className="bg-white border border-gray-700 rounded-20 px-16 py-8"
+                onPress={() => handleSearch(tag)}
+              >
+                <Text className="text-body text-gray-700">{tag}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
       </View>
 
-      {/* Content */}
+      {/* ================================================================
+          Main Content — Discover vs Results
+          ================================================================ */}
       {searchMode === "discover" ? (
-        // Discover Mode - will add Trending + Categories here
-        <View className="flex-1 items-center justify-center">
-          <Text className="text-body text-gray-500">Discover mode (WIP)</Text>
-        </View>
+        // ------------------------------------------------------------
+        // Discover Mode
+        // ------------------------------------------------------------
+        <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+          {/* Trending Now Section */}
+          <View className="px-16 py-20">
+            <Text className="text-h3 font-semibold text-gray-700 mb-12">
+              Trending now
+            </Text>
+
+            {trendingTags.length > 0 ? (
+              <View className="flex-row flex-wrap gap-8">
+                {trendingTags.map((tag) => (
+                  <TouchableOpacity
+                    key={tag}
+                    className="bg-white border border-gray-700 rounded-20 px-16 py-8"
+                    onPress={() => handleSearch(tag)}
+                  >
+                    <Text className="text-body text-gray-700">{tag}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ) : (
+              <ActivityIndicator size="small" color="#4C4464" />
+            )}
+          </View>
+
+          {/* Category Grids */}
+          {loadingCategories ? (
+            <View className="flex-1 items-center justify-center py-40">
+              <ActivityIndicator size="large" color="#4C4464" />
+              <Text className="text-body text-gray-500 mt-16">
+                Loading categories...
+              </Text>
+            </View>
+          ) : (
+            categories.map((category) => (
+              <View key={category} className="mt-20 mb-16">
+                {/* Category Header */}
+                <View className="flex-row items-center justify-between px-16 mb-12">
+                  <TouchableOpacity onPress={() => handleSearch(category)}>
+                    <Text className="text-h3 font-medium text-gray-700 capitalize">
+                      {category}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => handleSearch(category)}>
+                    <Feather name="search" size={20} color="#6C757D" />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Horizontal Image Grid */}
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}
+                >
+                  {categoryPosts[category]?.map((post) => {
+                    const embed = post.embed;
+
+                    // Guard: ensure post has images
+                    if (
+                      !embed ||
+                      !("images" in embed) ||
+                      !embed.images ||
+                      embed.images.length === 0
+                    ) {
+                      return null;
+                    }
+
+                    const image = embed.images[0];
+                    if (!image) return null;
+
+                    return (
+                      <TouchableOpacity
+                        key={post.uri}
+                        className="bg-white rounded-xl overflow-hidden"
+                        style={{ width: 109, height: 146 }}
+                        activeOpacity={0.9}
+                      >
+                        <Image
+                          source={{ uri: image.thumb }}
+                          style={{ width: "100%", height: "100%" }}
+                          resizeMode="cover"
+                        />
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            ))
+          )}
+        </ScrollView>
       ) : (
+        // ------------------------------------------------------------
         // Results Mode
+        // ------------------------------------------------------------
         <View className="flex-1">
           {loading ? (
             <View className="flex-1 items-center justify-center">
