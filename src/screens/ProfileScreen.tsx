@@ -19,6 +19,7 @@ import {
   getProfile,
   getUserPosts,
 } from "../services/blueskyApi";
+import { useInteraction } from "../contexts/InteractionContext";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { BlueskyFeedItem } from "../types";
 import PostCard from "../components/PostCard";
@@ -33,7 +34,9 @@ export default function ProfileScreen() {
   // --------------------------------------------------------------------------
   const navigation = useNavigation();
   const route = useRoute();
-  const handle = (route.params as any)?.handle; // If exists, visiting profile
+  const { followUser, unfollowUser, isFollowing, setFollowState } =
+    useInteraction();
+  const handle = (route.params as any)?.handle;
   const isMyProfile = !handle;
   // --------------------------------------------------------------------------
   // State
@@ -45,6 +48,7 @@ export default function ProfileScreen() {
   const [activeTab, setActiveTab] = useState<"post" | "board">("post");
   const [cursor, setCursor] = useState<string | undefined>(undefined);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
 
   // --------------------------------------------------------------------------
   // Initial Load
@@ -63,6 +67,11 @@ export default function ProfileScreen() {
         ? await getMyProfile()
         : await getProfile(handle);
       setProfile(profileData);
+
+      // Set follow state for visiting profile
+      if (!isMyProfile && profileData.viewer && profileData.did) {
+        setFollowState(profileData.did, profileData.viewer.following || null);
+      }
 
       if (activeTab === "post") {
         // Load posts - conditional based on isMyProfile
@@ -123,6 +132,29 @@ export default function ProfileScreen() {
     setRefreshing(true);
     await loadProfileData();
     setRefreshing(false);
+  };
+
+  // --------------------------------------------------------------------------
+  // Handle Follow/Unfollow
+  // --------------------------------------------------------------------------
+  const handleFollowToggle = async () => {
+    if (followLoading || !profile?.did) return;
+
+    setFollowLoading(true);
+
+    try {
+      if (isFollowing(profile.did)) {
+        // Unfollow
+        await unfollowUser(profile.did);
+      } else {
+        // Follow
+        await followUser(profile.did);
+      }
+    } catch (error) {
+      console.error("Error toggling follow:", error);
+    } finally {
+      setFollowLoading(false);
+    }
   };
 
   // --------------------------------------------------------------------------
@@ -228,10 +260,33 @@ export default function ProfileScreen() {
                 </Text>
               </TouchableOpacity>
             ) : (
-              <TouchableOpacity className="bg-primary-900 rounded-20 px-40 py-12">
-                <Text className="text-body font-semibold text-white">
-                  Follow
-                </Text>
+              <TouchableOpacity
+                className={`rounded-20 px-40 py-12 ${
+                  isFollowing(profile?.did || "")
+                    ? "bg-gray-200"
+                    : "bg-primary-900"
+                }`}
+                onPress={handleFollowToggle}
+                disabled={followLoading}
+              >
+                {followLoading ? (
+                  <ActivityIndicator
+                    size="small"
+                    color={
+                      isFollowing(profile?.did || "") ? "#343434" : "#FFFFFF"
+                    }
+                  />
+                ) : (
+                  <Text
+                    className={`text-body font-semibold ${
+                      isFollowing(profile?.did || "")
+                        ? "text-gray-700"
+                        : "text-white"
+                    }`}
+                  >
+                    {isFollowing(profile?.did || "") ? "Following" : "Follow"}
+                  </Text>
+                )}
               </TouchableOpacity>
             )}
 

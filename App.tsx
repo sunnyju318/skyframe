@@ -3,6 +3,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { AuthProvider, useAuth } from "./src/contexts/AuthContext";
 import { BoardProvider } from "./src/contexts/BoardContext";
+import { InteractionProvider } from "./src/contexts/InteractionContext";
 import LoginScreen from "./src/screens/LoginScreen";
 import BottomTabNavigator from "./src/navigation/BottomTabNavigator";
 
@@ -34,7 +35,9 @@ export default function App() {
   return (
     <AuthProvider>
       <BoardProvider>
-        <AppNavigator />
+        <InteractionProvider>
+          <AppNavigator />
+        </InteractionProvider>
       </BoardProvider>
     </AuthProvider>
   );

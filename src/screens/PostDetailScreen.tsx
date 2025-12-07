@@ -13,17 +13,11 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import {
-  useNavigation,
-  useRoute,
-  StackActions,
-} from "@react-navigation/native";
-import { searchPosts } from "../services/blueskyApi";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import { BlueskyPost } from "../types";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../types/navigation.types";
 import MasonryList from "@react-native-seoul/masonry-list";
-import { getDiscoverFeed } from "../services/blueskyApi";
+import { searchPosts, getDiscoverFeed } from "../services/blueskyApi";
+import { useInteraction } from "../contexts/InteractionContext";
 import PostCard from "../components/PostCard";
 
 const { width } = Dimensions.get("window");
@@ -32,9 +26,10 @@ export default function PostDetailScreen() {
   // --------------------------------------------------------------------------
   // Navigation & Route
   // --------------------------------------------------------------------------
-  const navigation =
-    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const navigation = useNavigation<any>();
   const route = useRoute();
+  const { followUser, unfollowUser, isFollowing, setFollowState } =
+    useInteraction();
   const { post } = route.params as any;
 
   // Extract post data (handle both BlueskyPost and BlueskyFeedItem)
@@ -46,7 +41,7 @@ export default function PostDetailScreen() {
   // --------------------------------------------------------------------------
   // State
   // --------------------------------------------------------------------------
-  const [isFollowing, setIsFollowing] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
   const [showFullText, setShowFullText] = useState(false);
   const [relatedPosts, setRelatedPosts] = useState<BlueskyPost[]>([]);
   const [loadingRelated, setLoadingRelated] = useState(false);
@@ -67,6 +62,15 @@ export default function PostDetailScreen() {
 
     loadRelatedPosts();
   }, [postData.uri]);
+
+  // --------------------------------------------------------------------------
+  // Initialize follow state from author data
+  // --------------------------------------------------------------------------
+  useEffect(() => {
+    if (author.did && author.viewer?.following) {
+      setFollowState(author.did, author.viewer.following);
+    }
+  }, [author.did]);
 
   const loadRelatedPosts = async () => {
     setLoadingRelated(true);
@@ -141,6 +145,29 @@ export default function PostDetailScreen() {
       setRelatedCursor(undefined);
     } finally {
       setLoadingMoreRelated(false);
+    }
+  };
+
+  // --------------------------------------------------------------------------
+  // Handle Follow/Unfollow
+  // --------------------------------------------------------------------------
+  const handleFollowToggle = async () => {
+    if (followLoading || !author.did) return;
+
+    setFollowLoading(true);
+
+    try {
+      if (isFollowing(author.did)) {
+        // Unfollow
+        await unfollowUser(author.did);
+      } else {
+        // Follow
+        await followUser(author.did);
+      }
+    } catch (error) {
+      console.error("Error toggling follow:", error);
+    } finally {
+      setFollowLoading(false);
     }
   };
 
@@ -225,17 +252,25 @@ export default function PostDetailScreen() {
           {/* Follow Button */}
           <TouchableOpacity
             className={`rounded-20 px-16 py-8 ${
-              isFollowing ? "bg-gray-200" : "bg-primary-900"
+              isFollowing(author.did) ? "bg-gray-200" : "bg-primary-900"
             }`}
-            onPress={() => setIsFollowing(!isFollowing)}
+            onPress={handleFollowToggle}
+            disabled={followLoading}
           >
-            <Text
-              className={`text-caption font-body ${
-                isFollowing ? "text-gray-700" : "text-white"
-              }`}
-            >
-              {isFollowing ? "Following" : "Follow"}
-            </Text>
+            {followLoading ? (
+              <ActivityIndicator
+                size="small"
+                color={isFollowing(author.did) ? "#343434" : "#FFFFFF"}
+              />
+            ) : (
+              <Text
+                className={`text-caption font-body ${
+                  isFollowing(author.did) ? "text-gray-700" : "text-white"
+                }`}
+              >
+                {isFollowing(author.did) ? "Following" : "Follow"}
+              </Text>
+            )}
           </TouchableOpacity>
         </View>
 

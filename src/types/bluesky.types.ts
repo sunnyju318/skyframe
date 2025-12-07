@@ -1,10 +1,18 @@
 // Bluesky API response types
 
+export interface BlueskyViewer {
+  following?: string; // Follow record URI if following
+  followedBy?: string; // Follow record URI if followed by this user
+  muted?: boolean;
+  blockedBy?: boolean;
+}
+
 export interface BlueskyAuthor {
   handle: string;
   displayName?: string;
   avatar?: string;
   did?: string;
+  viewer?: BlueskyViewer;
 }
 
 export interface BlueskyImage {
@@ -76,4 +84,17 @@ export interface BlueskyTimelineResponse {
 export interface BlueskySearchResponse {
   posts: BlueskyPost[];
   cursor?: string;
+}
+
+// Profile data returned from API
+export interface ProfileData {
+  name: string;
+  handle: string;
+  avatar: string;
+  bio: string;
+  postsCount: number;
+  followersCount: number;
+  followingCount: number;
+  did?: string;
+  viewer?: BlueskyViewer;
 }

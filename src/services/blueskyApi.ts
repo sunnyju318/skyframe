@@ -4,7 +4,12 @@
 // ============================================================================
 
 import { agent } from "./authService"; // Shared authenticated agent
-import { BlueskyFeedItem, BlueskyPost, BlueskyImageEmbed } from "../types";
+import {
+  BlueskyFeedItem,
+  BlueskyPost,
+  BlueskyImageEmbed,
+  ProfileData,
+} from "../types";
 
 // ============================================================================
 // Type Guard — Check if embed contains images
@@ -145,7 +150,7 @@ export const searchPosts = async (
 /**
  * Fetches and returns the authenticated user's profile info.
  */
-export const getMyProfile = async () => {
+export const getMyProfile = async (): Promise<ProfileData> => {
   try {
     if (!agent.session) {
       throw new Error("Not authenticated. Please login first.");
@@ -177,7 +182,7 @@ export const getMyProfile = async () => {
 // ============================================================================
 // Get Other User's Profile (Visiting Profile)
 // ============================================================================
-export const getProfile = async (handle: string) => {
+export const getProfile = async (handle: string): Promise<ProfileData> => {
   try {
     if (!agent.session) {
       throw new Error("Not authenticated. Please login first.");
@@ -197,6 +202,8 @@ export const getProfile = async (handle: string) => {
       postsCount: response.data.postsCount || 0,
       followersCount: response.data.followersCount || 0,
       followingCount: response.data.followsCount || 0,
+      did: response.data.did, // Add DID for follow
+      viewer: response.data.viewer, // Add viewer info
     };
   } catch (error) {
     console.error("Error fetching profile:", error);
@@ -421,6 +428,42 @@ export const getNotifications = async (
     };
   } catch (error) {
     console.error("Error fetching notifications:", error);
+    throw error;
+  }
+};
+
+// ============================================================================
+// Follow User
+// ============================================================================
+export const followUser = async (did: string): Promise<string> => {
+  try {
+    if (!agent.session) {
+      throw new Error("Not authenticated. Please login first.");
+    }
+
+    const response = await agent.follow(did);
+    console.log("Followed user:", did);
+
+    return response.uri; // Return follow record URI
+  } catch (error) {
+    console.error("Error following user:", error);
+    throw error;
+  }
+};
+
+// ============================================================================
+// Unfollow User
+// ============================================================================
+export const unfollowUser = async (followUri: string): Promise<void> => {
+  try {
+    if (!agent.session) {
+      throw new Error("Not authenticated. Please login first.");
+    }
+
+    await agent.deleteFollow(followUri);
+    console.log("Unfollowed user");
+  } catch (error) {
+    console.error("Error unfollowing user:", error);
     throw error;
   }
 };
