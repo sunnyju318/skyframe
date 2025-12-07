@@ -1,72 +1,43 @@
-import React, { useEffect } from "react";
-import { View, ActivityIndicator } from "react-native";
+import React from "react";
 import { NavigationContainer } from "@react-navigation/native";
-import {
-  useFonts,
-  Poppins_400Regular,
-  Poppins_500Medium,
-  Poppins_600SemiBold,
-  Poppins_700Bold,
-} from "@expo-google-fonts/poppins";
-import * as SplashScreen from "expo-splash-screen";
-
-import BottomTabNavigator from "./src/navigation/BottomTabNavigator";
-import LoginScreen from "./src/screens/LoginScreen";
-import { BoardProvider } from "./src/contexts/BoardContext";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { AuthProvider, useAuth } from "./src/contexts/AuthContext";
+import { BoardProvider } from "./src/contexts/BoardContext";
+import LoginScreen from "./src/screens/LoginScreen";
+import BottomTabNavigator from "./src/navigation/BottomTabNavigator";
+import PostDetailScreen from "./src/screens/PostDetailScreen";
 
-SplashScreen.preventAutoHideAsync();
+const Stack = createNativeStackNavigator();
 
-// Main App Component (after authentication check)
-function AppContent() {
+function AppNavigator() {
   const { isAuthenticated, loading } = useAuth();
 
-  // Show loading screen while checking session
   if (loading) {
-    return (
-      <View className="flex-1 items-center justify-center bg-white">
-        <ActivityIndicator size="large" color="#4C4464" />
-      </View>
-    );
-  }
-
-  // Show login screen if not authenticated
-  if (!isAuthenticated) {
-    return <LoginScreen />;
-  }
-
-  // Show main app if authenticated
-  return (
-    <BoardProvider>
-      <NavigationContainer>
-        <BottomTabNavigator />
-      </NavigationContainer>
-    </BoardProvider>
-  );
-}
-
-// Root App Component
-export default function App() {
-  const [fontsLoaded] = useFonts({
-    Poppins_400Regular,
-    Poppins_500Medium,
-    Poppins_600SemiBold,
-    Poppins_700Bold,
-  });
-
-  useEffect(() => {
-    if (fontsLoaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [fontsLoaded]);
-
-  if (!fontsLoaded) {
     return null;
   }
 
   return (
+    <NavigationContainer>
+      {!isAuthenticated ? (
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="Login" component={LoginScreen} />
+        </Stack.Navigator>
+      ) : (
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="MainTabs" component={BottomTabNavigator} />
+          <Stack.Screen name="PostDetail" component={PostDetailScreen} />
+        </Stack.Navigator>
+      )}
+    </NavigationContainer>
+  );
+}
+
+export default function App() {
+  return (
     <AuthProvider>
-      <AppContent />
+      <BoardProvider>
+        <AppNavigator />
+      </BoardProvider>
     </AuthProvider>
   );
 }

@@ -2,6 +2,7 @@
 import { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
 import { CompositeScreenProps } from "@react-navigation/native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { BlueskyPost, BlueskyFeedItem } from "./bluesky.types";
 
 // Bottom Tab Navigator params
 export type BottomTabParamList = {
@@ -10,6 +11,12 @@ export type BottomTabParamList = {
   Create: undefined;
   Inbox: undefined;
   Profile: undefined;
+};
+
+// Root Stack (MainTabs + PostDetail)
+export type RootStackParamList = {
+  MainTabs: undefined;
+  PostDetail: { post: BlueskyPost | BlueskyFeedItem };
 };
 
 // Home Stack params
