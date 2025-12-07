@@ -217,20 +217,20 @@ export default function PostDetailScreen() {
     try {
       if (isLiked(postData.uri)) {
         // Unlike
-        setLikeCount((prev) => prev - 1);
+        setLikeCount((prev: number) => prev - 1);
         await unlikePost(postData.uri);
       } else {
         // Like
-        setLikeCount((prev) => prev + 1);
+        setLikeCount((prev: number) => prev + 1);
         await likePost(postData.uri, postData.cid);
       }
     } catch (error) {
       console.error("Error toggling like:", error);
       // Revert count on error
       if (isLiked(postData.uri)) {
-        setLikeCount((prev) => prev + 1);
+        setLikeCount((prev: number) => prev + 1);
       } else {
-        setLikeCount((prev) => prev - 1);
+        setLikeCount((prev: number) => prev - 1);
       }
     } finally {
       setLikeLoading(false);
@@ -248,20 +248,20 @@ export default function PostDetailScreen() {
     try {
       if (isReposted(postData.uri)) {
         // Unrepost
-        setRepostCount((prev) => prev - 1);
+        setRepostCount((prev: number) => prev - 1);
         await unrepostPost(postData.uri);
       } else {
         // Repost
-        setRepostCount((prev) => prev + 1);
+        setRepostCount((prev: number) => prev + 1);
         await repostPost(postData.uri, postData.cid);
       }
     } catch (error) {
       console.error("Error toggling repost:", error);
       // Revert count on error
       if (isReposted(postData.uri)) {
-        setRepostCount((prev) => prev + 1);
+        setRepostCount((prev: number) => prev + 1);
       } else {
-        setRepostCount((prev) => prev - 1);
+        setRepostCount((prev: number) => prev - 1);
       }
     } finally {
       setRepostLoading(false);
