@@ -1,4 +1,6 @@
-// Home screen with masonry feed layout
+// ============================================================================
+// 🏠 HomeScreen — Discover & Following Feed with Masonry Layout
+// ============================================================================
 
 import PostCard from "../components/PostCard";
 import React, { useState, useEffect } from "react";
@@ -14,7 +16,14 @@ import MasonryList from "@react-native-seoul/masonry-list";
 import { getTimelineFeed, getDiscoverFeed } from "../services/blueskyApi";
 import { BlueskyFeedItem } from "../types";
 
+// ============================================================================
+// Component
+// ============================================================================
+
 export default function HomeScreen() {
+  // --------------------------------------------------------------------------
+  // State
+  // --------------------------------------------------------------------------
   const [posts, setPosts] = useState<BlueskyFeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -24,11 +33,16 @@ export default function HomeScreen() {
   const [cursor, setCursor] = useState<string | undefined>(undefined);
   const [loadingMore, setLoadingMore] = useState(false);
 
-  // Load feed on mount
+  // --------------------------------------------------------------------------
+  // Initial Load
+  // --------------------------------------------------------------------------
   useEffect(() => {
     loadFeed();
   }, []);
 
+  // --------------------------------------------------------------------------
+  // Load Feed (Discover or Following)
+  // --------------------------------------------------------------------------
   const loadFeed = async () => {
     try {
       const response =
@@ -36,7 +50,6 @@ export default function HomeScreen() {
           ? await getDiscoverFeed()
           : await getTimelineFeed();
 
-      // 빈 응답 체크
       if (!response.feed || response.feed.length === 0) {
         setPosts([]);
         setCursor(undefined);
@@ -48,32 +61,33 @@ export default function HomeScreen() {
     } catch (error: any) {
       console.error("Error loading feed:", error);
       Alert.alert("Error", "Failed to load feed. Please try again.");
-      setPosts([]); // ← 에러 시 빈 배열
-      setCursor(undefined); // ← cursor 제거
+      setPosts([]);
+      setCursor(undefined);
     } finally {
       setLoading(false);
     }
   };
 
+  // --------------------------------------------------------------------------
+  // Pagination — Load More Posts
+  // --------------------------------------------------------------------------
   const loadMorePosts = async () => {
     if (loadingMore || !cursor) return;
 
     setLoadingMore(true);
-
     try {
       const response =
         activeTab === "discover"
           ? await getDiscoverFeed(cursor)
           : await getTimelineFeed(cursor);
 
-      // 빈 응답 체크
-      if (!response || !response.feed || response.feed.length === 0) {
+      if (!response.feed || response.feed.length === 0) {
         console.log("No more posts available");
         setCursor(undefined);
-        return; // ← early return
+        return;
       }
 
-      // 중복 제거
+      // Remove duplicates
       const newPosts = response.feed.filter(
         (newPost) =>
           !posts.some(
@@ -86,19 +100,23 @@ export default function HomeScreen() {
     } catch (error: any) {
       console.error("Error loading more:", error);
       setCursor(undefined);
-      // Alert 제거 - 조용히 실패
     } finally {
       setLoadingMore(false);
     }
   };
 
+  // --------------------------------------------------------------------------
+  // Pull to Refresh
+  // --------------------------------------------------------------------------
   const handleRefresh = async () => {
     setRefreshing(true);
     await loadFeed();
     setRefreshing(false);
   };
 
-  // Render individual post card
+  // --------------------------------------------------------------------------
+  // Render each masonry item
+  // --------------------------------------------------------------------------
   const renderItem = ({ item, i }: { item: any; i: number }) => {
     const feedItem = item as BlueskyFeedItem;
     const isLeftColumn = i % 2 === 0;
@@ -106,7 +124,9 @@ export default function HomeScreen() {
     return <PostCard feedItem={feedItem} isLeftColumn={isLeftColumn} />;
   };
 
-  // Loading state
+  // --------------------------------------------------------------------------
+  // Loading State
+  // --------------------------------------------------------------------------
   if (loading) {
     return (
       <View className="flex-1 items-center justify-center bg-gray-50">
@@ -116,7 +136,9 @@ export default function HomeScreen() {
     );
   }
 
-  // Empty state
+  // --------------------------------------------------------------------------
+  // Empty State
+  // --------------------------------------------------------------------------
   if (posts.length === 0) {
     return (
       <View className="flex-1 items-center justify-center bg-gray-50 px-24">
@@ -130,9 +152,15 @@ export default function HomeScreen() {
     );
   }
 
+  // ============================================================================
+  // UI — Header + Tabs + Masonry Feed
+  // ============================================================================
+
   return (
     <View className="flex-1 bg-gray-50">
-      {/* Header */}
+      {/* ------------------------------------------------------------
+          Header (Logo + Tabs)
+          ------------------------------------------------------------ */}
       <View className="bg-white border-b border-gray-200 pt-58">
         {/* Logo */}
         <View className="items-center py-16">
@@ -187,7 +215,9 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* Masonry Feed */}
+      {/* ------------------------------------------------------------
+          Masonry Feed
+          ------------------------------------------------------------ */}
       <MasonryList
         key={activeTab}
         data={posts}

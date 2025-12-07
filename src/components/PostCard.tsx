@@ -1,4 +1,7 @@
-// Reusable post card component with image loading
+// ============================================================================
+// PostCard — Reusable feed image card with shimmer skeleton loader
+// ============================================================================
+
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useState, useEffect, useRef } from "react";
 import { View, TouchableOpacity, Animated, StyleSheet } from "react-native";
@@ -11,6 +14,10 @@ interface PostCardProps {
   onPress?: () => void;
 }
 
+// ============================================================================
+// Component
+// ============================================================================
+
 export default function PostCard({
   feedItem,
   isLeftColumn,
@@ -19,7 +26,10 @@ export default function PostCard({
   const [imageLoading, setImageLoading] = useState(true);
   const shimmerAnimation = useRef(new Animated.Value(0)).current;
 
-  // Shimmer animation
+  // ==========================================================================
+  // Shimmer Animation Setup
+  // ==========================================================================
+
   useEffect(() => {
     if (!imageLoading) return;
 
@@ -40,6 +50,7 @@ export default function PostCard({
 
     loop.start();
 
+    // Stop animation on unmount or when loading is finished
     return () => {
       loop.stop();
     };
@@ -50,6 +61,10 @@ export default function PostCard({
     outputRange: [-300, 300],
   });
 
+  // ==========================================================================
+  // Embed & Image Guard
+  // ==========================================================================
+
   const embed = feedItem.post.embed;
   if (
     !embed ||
@@ -57,7 +72,7 @@ export default function PostCard({
     !embed.images ||
     embed.images.length === 0
   ) {
-    // Return an empty view instead of null (prevents type errors)
+    // Return an empty view instead of null (safer for lists)
     return <View />;
   }
 
@@ -68,6 +83,10 @@ export default function PostCard({
     image.aspectRatio?.width && image.aspectRatio?.height
       ? image.aspectRatio.width / image.aspectRatio.height
       : 1;
+
+  // ==========================================================================
+  // Render
+  // ==========================================================================
 
   return (
     <TouchableOpacity
@@ -87,7 +106,7 @@ export default function PostCard({
           minHeight: 200,
         }}
       >
-        {/* Skeleton Loader with Shimmer */}
+        {/* Shimmer skeleton shown while the image is loading */}
         {imageLoading && (
           <View
             style={[
@@ -117,7 +136,7 @@ export default function PostCard({
           </View>
         )}
 
-        {/* Actual Image */}
+        {/* Actual image */}
         <ExpoImage
           source={{ uri: image.thumb }}
           style={StyleSheet.absoluteFillObject}

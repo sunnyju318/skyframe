@@ -1,4 +1,7 @@
-// Global Board state management using Context API
+// ============================================================================
+// 📌 BoardContext — Global board & saved-post management (Similar to Pinterest)
+// ============================================================================
+
 import React, {
   createContext,
   useContext,
@@ -8,6 +11,7 @@ import React, {
 } from "react";
 import uuid from "react-native-uuid";
 
+// Local storage manager
 import {
   getBoardData,
   updateBoardData,
@@ -20,40 +24,52 @@ import {
 
 import { Board, BoardContextType, BlueskyPost } from "../types";
 
-// Sample data will be added later
+// Sample data placeholder (optional)
 const sampleBoards: Board[] = [];
 
-// Create Context
+// ============================================================================
+// Context Creation
+// ============================================================================
+
 const BoardContext = createContext<BoardContextType | undefined>(undefined);
 
-// Provider component
 interface BoardProviderProps {
   children: ReactNode;
 }
 
+// ============================================================================
+// Provider Component
+// ============================================================================
+
 export function BoardProvider({ children }: BoardProviderProps) {
-  // State
+  // Global state
   const [boards, setBoards] = useState<Board[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Load data on mount
+  // --------------------------------------------------------------------------
+  // Load boards on mount
+  // --------------------------------------------------------------------------
   useEffect(() => {
     loadBoards();
   }, []);
 
-  // ========== Load boards ==========
+  // ========================================================================
+  // Load boards from storage
+  // ========================================================================
   const loadBoards = async () => {
     try {
       const data = await getBoardData();
       setBoards(data);
-      setLoading(false);
     } catch (error) {
       console.log("loadBoards error:", error);
+    } finally {
       setLoading(false);
     }
   };
 
-  // ========== Reset boards ==========
+  // ========================================================================
+  // Reset all boards (clear local storage)
+  // ========================================================================
   const resetBoards = async () => {
     try {
       await updateBoardData([]);
@@ -64,7 +80,9 @@ export function BoardProvider({ children }: BoardProviderProps) {
     }
   };
 
-  // ========== Populate with sample data ==========
+  // ========================================================================
+  // Add sample boards (developer utility)
+  // ========================================================================
   const populateWithSampleData = async () => {
     try {
       await updateBoardData(sampleBoards);
@@ -76,7 +94,9 @@ export function BoardProvider({ children }: BoardProviderProps) {
     }
   };
 
-  // ========== Create board ==========
+  // ========================================================================
+  // Create a new board
+  // ========================================================================
   const createBoard = async (
     title: string,
     description: string = ""
@@ -103,18 +123,20 @@ export function BoardProvider({ children }: BoardProviderProps) {
     }
   };
 
-  // ========== Update board ==========
+  // ========================================================================
+  // Update board info (title, description, etc.)
+  // ========================================================================
   const updateBoard = async (
     boardId: string,
     updates: Partial<Board>
   ): Promise<Board | undefined> => {
     try {
       const currentBoards = await getBoardData();
-      const boardIndex = currentBoards.findIndex((b) => b.id === boardId);
+      const index = currentBoards.findIndex((b) => b.id === boardId);
 
-      if (boardIndex !== -1) {
+      if (index !== -1) {
         const updatedBoard = {
-          ...currentBoards[boardIndex],
+          ...currentBoards[index],
           ...updates,
         };
 
@@ -130,7 +152,9 @@ export function BoardProvider({ children }: BoardProviderProps) {
     }
   };
 
-  // ========== Delete board ==========
+  // ========================================================================
+  // Delete a board
+  // ========================================================================
   const deleteBoard = async (boardId: string): Promise<void> => {
     try {
       const currentBoards = await getBoardData();
@@ -143,7 +167,9 @@ export function BoardProvider({ children }: BoardProviderProps) {
     }
   };
 
-  // ========== Save post to board ==========
+  // ========================================================================
+  // Save a post into a board
+  // ========================================================================
   const savePostToBoard = async (
     boardId: string,
     post: BlueskyPost
@@ -159,7 +185,9 @@ export function BoardProvider({ children }: BoardProviderProps) {
     }
   };
 
-  // ========== Remove post from board ==========
+  // ========================================================================
+  // Remove a post from a board
+  // ========================================================================
   const removePostFromBoard = async (
     boardId: string,
     postUri: string
@@ -175,24 +203,27 @@ export function BoardProvider({ children }: BoardProviderProps) {
     }
   };
 
-  // ========== Find specific board ==========
+  // ========================================================================
+  // Helpers: find board / count / boards containing a post
+  // ========================================================================
+
   const getBoardById = (boardId: string): Board | undefined => {
     return boards.find((board) => board.id === boardId);
   };
 
-  // ========== Get board count ==========
   const getBoardCount = (): number => {
     return boards.length;
   };
 
-  // ========== Find boards containing a post ==========
   const getBoardsWithPost = (postUri: string): Board[] => {
     return boards.filter((board) =>
       board.posts.some((post) => post.uri === postUri)
     );
   };
 
-  // Context value
+  // ========================================================================
+  // Exported context value
+  // ========================================================================
   const value: BoardContextType = {
     boards,
     loading,
@@ -214,7 +245,10 @@ export function BoardProvider({ children }: BoardProviderProps) {
   );
 }
 
-// Custom Hook
+// ============================================================================
+// Hook — useBoardContext()
+// ============================================================================
+
 export function useBoardContext(): BoardContextType {
   const context = useContext(BoardContext);
   if (!context) {

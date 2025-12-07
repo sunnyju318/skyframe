@@ -1,4 +1,7 @@
-// Global authentication state management
+// ============================================================================
+// 🔐 AuthContext — Global authentication state (login, logout, session restore)
+// ============================================================================
+
 import React, {
   createContext,
   useContext,
@@ -15,6 +18,10 @@ import {
   Session,
 } from "../services/authService";
 
+// ============================================================================
+// Types
+// ============================================================================
+
 interface AuthContextType {
   isAuthenticated: boolean;
   user: Session | null;
@@ -26,18 +33,29 @@ interface AuthContextType {
   logout: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
 interface AuthProviderProps {
   children: ReactNode;
 }
 
+// ============================================================================
+// Context
+// ============================================================================
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// ============================================================================
+// Provider
+// ============================================================================
+
 export function AuthProvider({ children }: AuthProviderProps) {
+  // Global auth state
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // --------------------------------------------------------------------------
   // Check for existing session on mount
+  // --------------------------------------------------------------------------
   useEffect(() => {
     checkSession();
   }, []);
@@ -64,6 +82,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
+  // --------------------------------------------------------------------------
+  // Login
+  // --------------------------------------------------------------------------
   const login = async (
     identifier: string,
     password: string
@@ -79,12 +100,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return result;
   };
 
+  // --------------------------------------------------------------------------
+  // Logout
+  // --------------------------------------------------------------------------
   const logout = async () => {
     await logoutService();
     setUser(null);
     setIsAuthenticated(false);
   };
 
+  // --------------------------------------------------------------------------
+  // Context value
+  // --------------------------------------------------------------------------
   const value: AuthContextType = {
     isAuthenticated,
     user,
@@ -95,6 +122,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
+
+// ============================================================================
+// Hook — useAuth
+// ============================================================================
 
 export function useAuth(): AuthContextType {
   const context = useContext(AuthContext);

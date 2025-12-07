@@ -283,3 +283,36 @@ export const getPopularCategories = async (): Promise<string[]> => {
     ];
   }
 };
+
+// ============================================================================
+// Notifications
+// ============================================================================
+
+// Get notifications
+export const getNotifications = async (
+  cursor?: string
+): Promise<{
+  notifications: any[];
+  cursor?: string;
+}> => {
+  try {
+    if (!agent.session) {
+      throw new Error("Not authenticated. Please login first.");
+    }
+
+    const response = await agent.listNotifications({
+      limit: 30,
+      cursor: cursor,
+    });
+
+    console.log("Notifications:", response.data.notifications.length);
+
+    return {
+      notifications: response.data.notifications,
+      cursor: response.data.cursor,
+    };
+  } catch (error) {
+    console.error("Error fetching notifications:", error);
+    throw error;
+  }
+};

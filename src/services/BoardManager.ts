@@ -1,12 +1,17 @@
-// Board data management using AsyncStorage
+// ============================================================================
+// 📦 BoardManager — Board data management using AsyncStorage
+// ============================================================================
+
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Board, BlueskyPost } from "../types";
 
 const STORAGE_KEY = "BOARD_DATA";
 
-/* ========== ASYNC FUNCTIONS ========== */
+// ============================================================================
+// Async APIs — Load / Save boards
+// ============================================================================
 
-// Get all boards
+// Get all boards from storage
 export async function getBoardData(): Promise<Board[]> {
   let boards: Board[] = [];
 
@@ -16,7 +21,7 @@ export async function getBoardData(): Promise<Board[]> {
     if (raw !== null && raw !== undefined) {
       boards = JSON.parse(raw);
 
-      // Convert date strings to Date objects
+      // Convert date strings back to Date objects
       boards = boards.map((board) => ({
         ...board,
         createdAt: new Date(board.createdAt),
@@ -40,7 +45,7 @@ export async function getBoardById(boardId: string): Promise<Board | null> {
   }
 }
 
-// Save/overwrite board data
+// Overwrite all boards in storage
 export async function updateBoardData(boards: Board[]): Promise<void> {
   try {
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(boards));
@@ -49,52 +54,58 @@ export async function updateBoardData(boards: Board[]): Promise<void> {
   }
 }
 
-/* ========== UTILITY FUNCTIONS ========== */
+// ============================================================================
+// Synchronous utilities — Mutate in-memory board arrays
+// ============================================================================
 
-// Find board index
+// Find board index by ID
 export function getBoardIndex(boardId: string, currentBoards: Board[]): number {
   return currentBoards.findIndex((board) => board.id === boardId);
 }
 
-// Add new board
+// Add new board to list (mutates array)
 export function addBoard(newBoard: Board, currentBoards: Board[]): void {
   currentBoards.push(newBoard);
 }
 
-// Update board info
+// Replace existing board with updated one (mutates array)
 export function updateBoard(updatedBoard: Board, currentBoards: Board[]): void {
-  const boardIndex = getBoardIndex(updatedBoard.id, currentBoards);
-  if (boardIndex > -1) {
-    currentBoards[boardIndex] = updatedBoard;
+  const index = getBoardIndex(updatedBoard.id, currentBoards);
+  if (index > -1) {
+    currentBoards[index] = updatedBoard;
   }
 }
 
-// Delete board
+// Delete a board and return new list
 export function deleteBoard(boardId: string, currentBoards: Board[]): Board[] {
   return currentBoards.filter((board) => board.id !== boardId);
 }
 
-// Add post to board
+// ============================================================================
+// Post ↔ Board helpers
+// ============================================================================
+
+// Add a post to a board (prevents duplicates)
+// Returns true if added, false if already existed or board not found
 export function addPostToBoard(
   boardId: string,
   post: BlueskyPost,
   currentBoards: Board[]
 ): boolean {
-  const boardIndex = getBoardIndex(boardId, currentBoards);
+  const index = getBoardIndex(boardId, currentBoards);
 
-  if (boardIndex > -1) {
-    // Create posts array if it doesn't exist
-    if (!currentBoards[boardIndex].posts) {
-      currentBoards[boardIndex].posts = [];
+  if (index > -1) {
+    // Ensure posts array exists
+    if (!currentBoards[index].posts) {
+      currentBoards[index].posts = [];
     }
 
-    // Check if post is already saved (prevent duplicates)
-    const alreadySaved = currentBoards[boardIndex].posts.some(
+    const alreadySaved = currentBoards[index].posts.some(
       (p) => p.uri === post.uri
     );
 
     if (!alreadySaved) {
-      currentBoards[boardIndex].posts.push(post);
+      currentBoards[index].posts.push(post);
       return true;
     }
   }
@@ -102,16 +113,16 @@ export function addPostToBoard(
   return false;
 }
 
-// Remove post from board
+// Remove a post from a board (mutates array)
 export function removePostFromBoard(
   boardId: string,
   postUri: string,
   currentBoards: Board[]
 ): void {
-  const boardIndex = getBoardIndex(boardId, currentBoards);
+  const index = getBoardIndex(boardId, currentBoards);
 
-  if (boardIndex > -1) {
-    currentBoards[boardIndex].posts = currentBoards[boardIndex].posts.filter(
+  if (index > -1) {
+    currentBoards[index].posts = currentBoards[index].posts.filter(
       (post) => post.uri !== postUri
     );
   }
