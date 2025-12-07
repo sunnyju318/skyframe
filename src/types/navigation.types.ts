@@ -16,27 +16,35 @@ export type BottomTabParamList = {
 // Root Stack (MainTabs + PostDetail)
 export type RootStackParamList = {
   MainTabs: undefined;
-  PostDetail: { post: BlueskyPost | BlueskyFeedItem };
-  Profile: { handle: string } | undefined;
 };
 
 // Home Stack params
 export type HomeStackParamList = {
   HomeFeed: undefined;
-  PostDetail: { postUri: string };
+  PostDetail: { post: BlueskyPost | BlueskyFeedItem };
+  Profile: { handle: string };
 };
 
 // Search Stack params
 export type SearchStackParamList = {
   SearchMain: undefined;
-  SearchResults: { query: string };
+  PostDetail: { post: BlueskyPost | BlueskyFeedItem };
+  Profile: { handle: string };
+};
+
+// Inbox Stack params
+export type InboxStackParamList = {
+  InboxMain: undefined;
+  PostDetail: { post: BlueskyPost | BlueskyFeedItem };
+  Profile: { handle: string };
 };
 
 // Profile Stack params
 export type ProfileStackParamList = {
   ProfileMain: undefined;
+  PostDetail: { post: BlueskyPost | BlueskyFeedItem };
+  Profile: { handle: string };
   BoardDetail: { boardId: string };
-  VisitingProfile: { handle: string };
 };
 
 // Combined navigation props

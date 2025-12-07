@@ -1,10 +1,10 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Feather } from "@expo/vector-icons";
-import HomeScreen from "../screens/HomeScreen";
-import SearchScreen from "../screens/SearchScreen";
+import HomeStack from "./HomeStack";
+import SearchStack from "./SearchStack";
 import CreateScreen from "../screens/CreateScreen";
-import InboxScreen from "../screens/InboxScreen";
-import ProfileScreen from "../screens/ProfileScreen";
+import InboxStack from "./InboxStack";
+import ProfileStack from "./ProfileStack";
 
 const Tab = createBottomTabNavigator();
 
@@ -20,7 +20,7 @@ export default function BottomTabNavigator() {
     >
       <Tab.Screen
         name="Home"
-        component={HomeScreen}
+        component={HomeStack}
         options={{
           tabBarIcon: ({ color, size }) => (
             <Feather name="home" size={size} color={color} />
@@ -29,7 +29,7 @@ export default function BottomTabNavigator() {
       />
       <Tab.Screen
         name="Search"
-        component={SearchScreen}
+        component={SearchStack}
         options={{
           tabBarIcon: ({ color, size }) => (
             <Feather name="search" size={size} color={color} />
@@ -47,7 +47,7 @@ export default function BottomTabNavigator() {
       />
       <Tab.Screen
         name="Inbox"
-        component={InboxScreen}
+        component={InboxStack}
         options={{
           tabBarIcon: ({ color, size }) => (
             <Feather name="inbox" size={size} color={color} />
@@ -56,7 +56,7 @@ export default function BottomTabNavigator() {
       />
       <Tab.Screen
         name="Profile"
-        component={ProfileScreen}
+        component={ProfileStack}
         options={{
           tabBarIcon: ({ color, size }) => (
             <Feather name="user" size={size} color={color} />
