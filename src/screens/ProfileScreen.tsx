@@ -20,6 +20,7 @@ import {
   getUserPosts,
 } from "../services/blueskyApi";
 import { useInteraction } from "../contexts/InteractionContext";
+import { formatCount } from "../utils/formatters";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { BlueskyFeedItem } from "../types";
 import PostCard from "../components/PostCard";
@@ -188,7 +189,7 @@ export default function ProfileScreen() {
         stickyHeaderIndices={[1]} // Keeps tabs sticky
       >
         {/* -------------------------------------------------------------------
-           Profile Header Section
+        Profile Header Section
         ------------------------------------------------------------------- */}
         <View className="items-center pt-60 pb-24 px-24 bg-white">
           {/* Avatar */}
@@ -217,7 +218,9 @@ export default function ProfileScreen() {
           {/* Stats */}
           <View className="flex-row items-center mt-12">
             <Text className="text-body text-gray-700">
-              <Text className="font-semibold">{profile?.postsCount || 0}</Text>{" "}
+              <Text className="font-semibold">
+                {formatCount(profile?.postsCount || 0)}
+              </Text>{" "}
               posts
             </Text>
 
@@ -225,7 +228,7 @@ export default function ProfileScreen() {
 
             <Text className="text-body text-gray-700">
               <Text className="font-semibold">
-                {profile?.followersCount || 0}
+                {formatCount(profile?.followersCount || 0)}
               </Text>{" "}
               followers
             </Text>
@@ -234,7 +237,7 @@ export default function ProfileScreen() {
 
             <Text className="text-body text-gray-700">
               <Text className="font-semibold">
-                {profile?.followingCount || 0}
+                {formatCount(profile?.followingCount || 0)}
               </Text>{" "}
               following
             </Text>

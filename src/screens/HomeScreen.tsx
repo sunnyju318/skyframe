@@ -43,10 +43,11 @@ export default function HomeScreen() {
   // --------------------------------------------------------------------------
   // Load Feed (Discover or Following)
   // --------------------------------------------------------------------------
-  const loadFeed = async () => {
+  const loadFeed = async (tab?: "discover" | "following") => {
+    const targetTab = tab || activeTab;
     try {
       const response =
-        activeTab === "discover"
+        targetTab === "discover"
           ? await getDiscoverFeed()
           : await getTimelineFeed();
 
@@ -87,13 +88,17 @@ export default function HomeScreen() {
         return;
       }
 
-      // Remove duplicates
+      // Remove duplicates - check both ways
+      const existingUris = new Set(posts.map((p) => p.post.uri));
       const newPosts = response.feed.filter(
-        (newPost) =>
-          !posts.some(
-            (existingPost) => existingPost.post.uri === newPost.post.uri
-          )
+        (newPost) => !existingUris.has(newPost.post.uri)
       );
+
+      if (newPosts.length === 0) {
+        console.log("All posts were duplicates, skipping");
+        setCursor(response.cursor);
+        return;
+      }
 
       setPosts([...posts, ...newPosts]);
       setCursor(response.cursor);
@@ -178,7 +183,10 @@ export default function HomeScreen() {
             className="flex-1 items-center pb-12"
             onPress={() => {
               setActiveTab("discover");
-              loadFeed();
+              setPosts([]);
+              setCursor(undefined);
+              setLoading(true);
+              loadFeed("discover");
             }}
           >
             <Text
@@ -198,7 +206,10 @@ export default function HomeScreen() {
             className="flex-1 items-center pb-12"
             onPress={() => {
               setActiveTab("following");
-              loadFeed();
+              setPosts([]);
+              setCursor(undefined);
+              setLoading(true);
+              loadFeed("following");
             }}
           >
             <Text
@@ -221,7 +232,7 @@ export default function HomeScreen() {
       <MasonryList
         key={activeTab}
         data={posts}
-        keyExtractor={(item: any) => item.post.uri}
+        keyExtractor={(item: any, index: number) => `${item.post.uri}-${index}`}
         numColumns={2}
         showsVerticalScrollIndicator={false}
         renderItem={renderItem}

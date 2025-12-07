@@ -19,6 +19,7 @@ import MasonryList from "@react-native-seoul/masonry-list";
 import { searchPosts, getDiscoverFeed } from "../services/blueskyApi";
 import { useInteraction } from "../contexts/InteractionContext";
 import PostCard from "../components/PostCard";
+import { formatCount } from "../utils/formatters";
 
 const { width } = Dimensions.get("window");
 
@@ -298,19 +299,25 @@ export default function PostDetailScreen() {
             {/* Like */}
             <View className="flex-row items-center gap-4">
               <Feather name="heart" size={24} color="#343434" />
-              <Text className="text-body text-gray-700">{likeCount}</Text>
+              <Text className="text-body text-gray-700">
+                {formatCount(likeCount)}
+              </Text>
             </View>
 
             {/* Comment */}
             <View className="flex-row items-center gap-4">
               <Feather name="message-circle" size={24} color="#343434" />
-              <Text className="text-body text-gray-700">{replyCount}</Text>
+              <Text className="text-body text-gray-700">
+                {formatCount(replyCount)}
+              </Text>
             </View>
 
             {/* Repost */}
             <View className="flex-row items-center gap-4">
               <Feather name="repeat" size={24} color="#343434" />
-              <Text className="text-body text-gray-700">{repostCount}</Text>
+              <Text className="text-body text-gray-700">
+                {formatCount(repostCount)}
+              </Text>
             </View>
 
             {/* Share */}
