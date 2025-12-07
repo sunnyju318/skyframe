@@ -29,8 +29,20 @@ export default function PostDetailScreen() {
   // --------------------------------------------------------------------------
   const navigation = useNavigation<any>();
   const route = useRoute();
-  const { followUser, unfollowUser, isFollowing, setFollowState } =
-    useInteraction();
+  const {
+    followUser,
+    unfollowUser,
+    isFollowing,
+    setFollowState,
+    likePost,
+    unlikePost,
+    isLiked,
+    setLikeState,
+    repostPost,
+    unrepostPost,
+    isReposted,
+    setRepostState,
+  } = useInteraction();
   const { post } = route.params as any;
 
   // Extract post data (handle both BlueskyPost and BlueskyFeedItem)
@@ -43,6 +55,8 @@ export default function PostDetailScreen() {
   // State
   // --------------------------------------------------------------------------
   const [followLoading, setFollowLoading] = useState(false);
+  const [likeLoading, setLikeLoading] = useState(false);
+  const [repostLoading, setRepostLoading] = useState(false);
   const [showFullText, setShowFullText] = useState(false);
   const [relatedPosts, setRelatedPosts] = useState<BlueskyPost[]>([]);
   const [loadingRelated, setLoadingRelated] = useState(false);
@@ -72,6 +86,26 @@ export default function PostDetailScreen() {
       setFollowState(author.did, author.viewer.following);
     }
   }, [author.did]);
+
+  // --------------------------------------------------------------------------
+  // Initialize like/repost state from post data
+  // --------------------------------------------------------------------------
+  useEffect(() => {
+    if (postData.uri) {
+      // Check if post has viewer data (like/repost state)
+      const viewer = postData.viewer;
+      if (viewer) {
+        // Set like state
+        if (viewer.like) {
+          setLikeState(postData.uri, viewer.like);
+        }
+        // Set repost state
+        if (viewer.repost) {
+          setRepostState(postData.uri, viewer.repost);
+        }
+      }
+    }
+  }, [postData.uri]);
 
   const loadRelatedPosts = async () => {
     setLoadingRelated(true);
@@ -173,6 +207,68 @@ export default function PostDetailScreen() {
   };
 
   // --------------------------------------------------------------------------
+  // Handle Like/Unlike
+  // --------------------------------------------------------------------------
+  const handleLikeToggle = async () => {
+    if (likeLoading || !postData.uri || !postData.cid) return;
+
+    setLikeLoading(true);
+
+    try {
+      if (isLiked(postData.uri)) {
+        // Unlike
+        setLikeCount((prev) => prev - 1);
+        await unlikePost(postData.uri);
+      } else {
+        // Like
+        setLikeCount((prev) => prev + 1);
+        await likePost(postData.uri, postData.cid);
+      }
+    } catch (error) {
+      console.error("Error toggling like:", error);
+      // Revert count on error
+      if (isLiked(postData.uri)) {
+        setLikeCount((prev) => prev + 1);
+      } else {
+        setLikeCount((prev) => prev - 1);
+      }
+    } finally {
+      setLikeLoading(false);
+    }
+  };
+
+  // --------------------------------------------------------------------------
+  // Handle Repost/Unrepost
+  // --------------------------------------------------------------------------
+  const handleRepostToggle = async () => {
+    if (repostLoading || !postData.uri || !postData.cid) return;
+
+    setRepostLoading(true);
+
+    try {
+      if (isReposted(postData.uri)) {
+        // Unrepost
+        setRepostCount((prev) => prev - 1);
+        await unrepostPost(postData.uri);
+      } else {
+        // Repost
+        setRepostCount((prev) => prev + 1);
+        await repostPost(postData.uri, postData.cid);
+      }
+    } catch (error) {
+      console.error("Error toggling repost:", error);
+      // Revert count on error
+      if (isReposted(postData.uri)) {
+        setRepostCount((prev) => prev + 1);
+      } else {
+        setRepostCount((prev) => prev - 1);
+      }
+    } finally {
+      setRepostLoading(false);
+    }
+  };
+
+  // --------------------------------------------------------------------------
   // Extract image
   // --------------------------------------------------------------------------
   const image =
@@ -181,9 +277,9 @@ export default function PostDetailScreen() {
   // --------------------------------------------------------------------------
   // Format counts
   // --------------------------------------------------------------------------
-  const likeCount = postData.likeCount || 0;
+  const [likeCount, setLikeCount] = useState(postData.likeCount || 0);
+  const [repostCount, setRepostCount] = useState(postData.repostCount || 0);
   const replyCount = postData.replyCount || 0;
-  const repostCount = postData.repostCount || 0;
 
   // --------------------------------------------------------------------------
   // Format time
@@ -297,32 +393,57 @@ export default function PostDetailScreen() {
         <View className="flex-row items-center justify-between px-16 py-16">
           <View className="flex-row items-center gap-20">
             {/* Like */}
-            <View className="flex-row items-center gap-4">
-              <Feather name="heart" size={24} color="#343434" />
-              <Text className="text-body text-gray-700">
+            <TouchableOpacity
+              className="flex-row items-center gap-4"
+              onPress={handleLikeToggle}
+              disabled={likeLoading}
+            >
+              <Feather
+                name="heart"
+                size={24}
+                color={isLiked(postData.uri) ? "#A190C8" : "#434343"}
+                fill={isLiked(postData.uri) ? "#A190C8" : "#A190C8"}
+              />
+              <Text
+                className="text-body"
+                style={{ color: isLiked(postData.uri) ? "#A190C8" : "#434343" }}
+              >
                 {formatCount(likeCount)}
               </Text>
-            </View>
+            </TouchableOpacity>
 
             {/* Comment */}
             <View className="flex-row items-center gap-4">
-              <Feather name="message-circle" size={24} color="#343434" />
+              <Feather name="message-circle" size={24} color="#434343" />
               <Text className="text-body text-gray-700">
                 {formatCount(replyCount)}
               </Text>
             </View>
 
             {/* Repost */}
-            <View className="flex-row items-center gap-4">
-              <Feather name="repeat" size={24} color="#343434" />
-              <Text className="text-body text-gray-700">
+            <TouchableOpacity
+              className="flex-row items-center gap-4"
+              onPress={handleRepostToggle}
+              disabled={repostLoading}
+            >
+              <Feather
+                name="repeat"
+                size={24}
+                color={isReposted(postData.uri) ? "#A190C8" : "#434343"}
+              />
+              <Text
+                className="text-body"
+                style={{
+                  color: isReposted(postData.uri) ? "#A190C8" : "#434343",
+                }}
+              >
                 {formatCount(repostCount)}
               </Text>
-            </View>
+            </TouchableOpacity>
 
             {/* Share */}
             <TouchableOpacity>
-              <Feather name="share-2" size={24} color="#343434" />
+              <Feather name="share-2" size={24} color="#434343" />
             </TouchableOpacity>
           </View>
 

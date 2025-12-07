@@ -467,3 +467,75 @@ export const unfollowUser = async (followUri: string): Promise<void> => {
     throw error;
   }
 };
+
+// ============================================================================
+// Like Post
+// ============================================================================
+export const likePost = async (uri: string, cid: string): Promise<string> => {
+  try {
+    if (!agent.session) {
+      throw new Error("Not authenticated. Please login first.");
+    }
+
+    const response = await agent.like(uri, cid);
+    console.log("Liked post:", uri);
+
+    return response.uri; // Return like record URI
+  } catch (error) {
+    console.error("Error liking post:", error);
+    throw error;
+  }
+};
+
+// ============================================================================
+// Unlike Post
+// ============================================================================
+export const unlikePost = async (likeUri: string): Promise<void> => {
+  try {
+    if (!agent.session) {
+      throw new Error("Not authenticated. Please login first.");
+    }
+
+    await agent.deleteLike(likeUri);
+    console.log("Unliked post");
+  } catch (error) {
+    console.error("Error unliking post:", error);
+    throw error;
+  }
+};
+
+// ============================================================================
+// Repost Post
+// ============================================================================
+export const repostPost = async (uri: string, cid: string): Promise<string> => {
+  try {
+    if (!agent.session) {
+      throw new Error("Not authenticated. Please login first.");
+    }
+
+    const response = await agent.repost(uri, cid);
+    console.log("Reposted post:", uri);
+
+    return response.uri; // Return repost record URI
+  } catch (error) {
+    console.error("Error reposting post:", error);
+    throw error;
+  }
+};
+
+// ============================================================================
+// Unrepost Post
+// ============================================================================
+export const unrepostPost = async (repostUri: string): Promise<void> => {
+  try {
+    if (!agent.session) {
+      throw new Error("Not authenticated. Please login first.");
+    }
+
+    await agent.deleteRepost(repostUri);
+    console.log("Unreposted post");
+  } catch (error) {
+    console.error("Error unreposting post:", error);
+    throw error;
+  }
+};
