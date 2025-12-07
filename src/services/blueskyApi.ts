@@ -316,3 +316,43 @@ export const getNotifications = async (
     throw error;
   }
 };
+
+// ============================================================================
+// Get my posts (author feed)
+// ============================================================================
+export const getMyPosts = async (
+  cursor?: string
+): Promise<{
+  posts: BlueskyFeedItem[];
+  cursor?: string;
+}> => {
+  try {
+    if (!agent.session) {
+      throw new Error("Not authenticated. Please login first.");
+    }
+
+    // Get current user's DID
+    const myDid = agent.session.did;
+
+    const response = await agent.getAuthorFeed({
+      actor: myDid,
+      limit: 30,
+      cursor: cursor,
+    });
+
+    // Filter posts with images only
+    const postsWithImages = response.data.feed.filter((item) =>
+      hasImages(item.post.embed)
+    );
+
+    console.log("My posts with images:", postsWithImages.length);
+
+    return {
+      posts: postsWithImages,
+      cursor: response.data.cursor,
+    };
+  } catch (error) {
+    console.error("Error fetching my posts:", error);
+    throw error;
+  }
+};

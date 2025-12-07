@@ -217,7 +217,7 @@ export default function InboxScreen() {
       {/* ================================================================
           Header
           ================================================================ */}
-      <View className="bg-white border-b border-gray-200 pt-58">
+      <View className="bg-white  pt-58">
         {/* Title */}
         <View className="px-16 py-16">
           <Text className="text-h2 font-semibold text-gray-700">Inbox</Text>

@@ -92,9 +92,9 @@ export default function PostCard({
     <TouchableOpacity
       className="bg-white rounded-xl overflow-hidden"
       style={{
-        marginBottom: 16,
-        marginRight: isLeftColumn ? 8 : 0,
-        marginLeft: isLeftColumn ? 0 : 8,
+        marginBottom: 12,
+        marginRight: isLeftColumn ? 6 : 0,
+        marginLeft: isLeftColumn ? 0 : 6,
       }}
       activeOpacity={0.9}
       onPress={onPress}

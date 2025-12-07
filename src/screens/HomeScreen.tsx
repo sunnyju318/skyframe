@@ -157,11 +157,11 @@ export default function HomeScreen() {
   // ============================================================================
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View className="flex-1 bg-white">
       {/* ------------------------------------------------------------
           Header (Logo + Tabs)
           ------------------------------------------------------------ */}
-      <View className="bg-white border-b border-gray-200 pt-58">
+      <View className="bg-white pt-58">
         {/* Logo */}
         <View className="items-center py-16">
           <Image

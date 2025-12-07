@@ -7,7 +7,7 @@ module.exports = {
       colors: {
         // Primary colors
         primary: {
-          900: "#2F2F32",
+          900: "#221F32",
           700: "#4C4464",
           500: "#766A95",
           300: "#A18DC8",
@@ -84,8 +84,8 @@ module.exports = {
         32: "32px",
         36: "36px",
         40: "40px",
-        60: "60px",
         58: "58px",
+        60: "60px",
       },
       borderRadius: {
         // Custom radius values from design system
