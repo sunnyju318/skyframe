@@ -6,6 +6,7 @@ import { BoardProvider } from "./src/contexts/BoardContext";
 import LoginScreen from "./src/screens/LoginScreen";
 import BottomTabNavigator from "./src/navigation/BottomTabNavigator";
 import PostDetailScreen from "./src/screens/PostDetailScreen";
+import ProfileScreen from "./src/screens/ProfileScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -26,6 +27,7 @@ function AppNavigator() {
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           <Stack.Screen name="MainTabs" component={BottomTabNavigator} />
           <Stack.Screen name="PostDetail" component={PostDetailScreen} />
+          <Stack.Screen name="Profile" component={ProfileScreen} />
         </Stack.Navigator>
       )}
     </NavigationContainer>

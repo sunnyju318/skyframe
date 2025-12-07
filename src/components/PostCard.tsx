@@ -8,6 +8,8 @@ import { View, TouchableOpacity, Animated, StyleSheet } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { BlueskyFeedItem } from "../types";
 import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../types/navigation.types";
 
 interface PostCardProps {
   feedItem: BlueskyFeedItem;
@@ -20,7 +22,8 @@ interface PostCardProps {
 // ============================================================================
 
 export default function PostCard({ feedItem, isLeftColumn }: PostCardProps) {
-  const navigation = useNavigation<any>();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [imageLoading, setImageLoading] = useState(true);
   const shimmerAnimation = useRef(new Animated.Value(0)).current;
 
@@ -96,7 +99,7 @@ export default function PostCard({ feedItem, isLeftColumn }: PostCardProps) {
       }}
       activeOpacity={0.9}
       onPress={() => {
-        navigation.navigate("PostDetail" as never, { post: feedItem } as never);
+        navigation.push("PostDetail", { post: feedItem });
       }}
     >
       {/* Container wrapping both the image and the skeleton loader */}

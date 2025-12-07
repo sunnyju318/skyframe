@@ -13,7 +13,13 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import MasonryList from "@react-native-seoul/masonry-list";
-import { getMyProfile, getMyPosts } from "../services/blueskyApi";
+import {
+  getMyProfile,
+  getMyPosts,
+  getProfile,
+  getUserPosts,
+} from "../services/blueskyApi";
+import { useRoute, useNavigation } from "@react-navigation/native";
 import { BlueskyFeedItem } from "../types";
 import PostCard from "../components/PostCard";
 
@@ -22,6 +28,13 @@ import PostCard from "../components/PostCard";
 // ============================================================================
 
 export default function ProfileScreen() {
+  // --------------------------------------------------------------------------
+  // Navigation & Route params
+  // --------------------------------------------------------------------------
+  const navigation = useNavigation();
+  const route = useRoute();
+  const handle = (route.params as any)?.handle; // If exists, visiting profile
+  const isMyProfile = !handle;
   // --------------------------------------------------------------------------
   // State
   // --------------------------------------------------------------------------
@@ -45,11 +58,17 @@ export default function ProfileScreen() {
   // --------------------------------------------------------------------------
   const loadProfileData = async () => {
     try {
-      const profileData = await getMyProfile();
+      // Load profile - conditional based on isMyProfile
+      const profileData = isMyProfile
+        ? await getMyProfile()
+        : await getProfile(handle);
       setProfile(profileData);
 
       if (activeTab === "post") {
-        const postsData = await getMyPosts();
+        // Load posts - conditional based on isMyProfile
+        const postsData = isMyProfile
+          ? await getMyPosts()
+          : await getUserPosts(handle);
         setPosts(postsData.posts);
         setCursor(postsData.cursor);
       }
@@ -69,7 +88,10 @@ export default function ProfileScreen() {
     setLoadingMore(true);
 
     try {
-      const response = await getMyPosts(cursor);
+      // Load more posts - conditional based on isMyProfile
+      const response = isMyProfile
+        ? await getMyPosts(cursor)
+        : await getUserPosts(handle, cursor);
 
       if (!response || !response.posts || response.posts.length === 0) {
         setCursor(undefined); // No more posts
@@ -193,17 +215,25 @@ export default function ProfileScreen() {
             </Text>
           )}
 
-          {/* Action Buttons: Share / Edit Profile / More */}
+          {/* Action Buttons: Share / Edit Profile or Follow / More */}
           <View className="flex-row items-center gap-12 mt-20">
             <TouchableOpacity className="p-8">
               <Feather name="share-2" size={26} color="#221F32" />
             </TouchableOpacity>
 
-            <TouchableOpacity className="bg-primary-900 rounded-20 px-40 py-12">
-              <Text className="text-body font-semibold text-white">
-                Edit Profile
-              </Text>
-            </TouchableOpacity>
+            {isMyProfile ? (
+              <TouchableOpacity className="bg-primary-900 rounded-20 px-40 py-12">
+                <Text className="text-body font-semibold text-white">
+                  Edit Profile
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity className="bg-primary-900 rounded-20 px-40 py-12">
+                <Text className="text-body font-semibold text-white">
+                  Follow
+                </Text>
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity className="p-8">
               <Feather name="more-horizontal" size={26} color="#221F32" />
@@ -301,6 +331,22 @@ export default function ProfileScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* Fixed Back Button - only show for visiting profile */}
+      {!isMyProfile && (
+        <View className="absolute top-58 left-20 z-10">
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={{
+              backgroundColor: "rgb(255, 255, 255)",
+              borderRadius: 12,
+              padding: 8,
+            }}
+          >
+            <Feather name="chevron-left" size={28} color="#343434" />
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }

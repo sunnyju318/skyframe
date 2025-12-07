@@ -175,6 +175,114 @@ export const getMyProfile = async () => {
 };
 
 // ============================================================================
+// Get Other User's Profile (Visiting Profile)
+// ============================================================================
+export const getProfile = async (handle: string) => {
+  try {
+    if (!agent.session) {
+      throw new Error("Not authenticated. Please login first.");
+    }
+
+    const response = await agent.getProfile({
+      actor: handle,
+    });
+
+    console.log("Profile loaded:", response.data.handle);
+
+    return {
+      name: response.data.displayName || response.data.handle,
+      handle: "@" + response.data.handle,
+      avatar: response.data.avatar || "https://via.placeholder.com/150",
+      bio: response.data.description || "",
+      postsCount: response.data.postsCount || 0,
+      followersCount: response.data.followersCount || 0,
+      followingCount: response.data.followsCount || 0,
+    };
+  } catch (error) {
+    console.error("Error fetching profile:", error);
+    throw error;
+  }
+};
+
+// ============================================================================
+// Get my posts (author feed)
+// ============================================================================
+export const getMyPosts = async (
+  cursor?: string
+): Promise<{
+  posts: BlueskyFeedItem[];
+  cursor?: string;
+}> => {
+  try {
+    if (!agent.session) {
+      throw new Error("Not authenticated. Please login first.");
+    }
+
+    // Get current user's DID
+    const myDid = agent.session.did;
+
+    const response = await agent.getAuthorFeed({
+      actor: myDid,
+      limit: 30,
+      cursor: cursor,
+    });
+
+    // Filter posts with images only
+    const postsWithImages = response.data.feed.filter((item) =>
+      hasImages(item.post.embed)
+    );
+
+    console.log("My posts with images:", postsWithImages.length);
+
+    return {
+      posts: postsWithImages,
+      cursor: response.data.cursor,
+    };
+  } catch (error) {
+    console.error("Error fetching my posts:", error);
+    throw error;
+  }
+};
+
+// ============================================================================
+// Get Other User's Posts (Author Feed)
+// ============================================================================
+export const getUserPosts = async (
+  handle: string,
+  cursor?: string
+): Promise<{
+  posts: BlueskyFeedItem[];
+  cursor?: string;
+}> => {
+  try {
+    if (!agent.session) {
+      throw new Error("Not authenticated. Please login first.");
+    }
+
+    const response = await agent.getAuthorFeed({
+      actor: handle,
+      limit: 30,
+      cursor: cursor,
+    });
+
+    // Filter posts with images only
+    const postsWithImages = response.data.feed.filter((item) =>
+      hasImages(item.post.embed)
+    );
+
+    console.log("User posts with images:", postsWithImages.length);
+
+    return {
+      posts: postsWithImages,
+      cursor: response.data.cursor,
+    };
+  } catch (error) {
+    console.error("Error fetching user posts:", error);
+    throw error;
+  }
+};
+
+// ============================================================================
 // #️Trending Hashtags  (short-term)
 // ============================================================================
 
@@ -313,46 +421,6 @@ export const getNotifications = async (
     };
   } catch (error) {
     console.error("Error fetching notifications:", error);
-    throw error;
-  }
-};
-
-// ============================================================================
-// Get my posts (author feed)
-// ============================================================================
-export const getMyPosts = async (
-  cursor?: string
-): Promise<{
-  posts: BlueskyFeedItem[];
-  cursor?: string;
-}> => {
-  try {
-    if (!agent.session) {
-      throw new Error("Not authenticated. Please login first.");
-    }
-
-    // Get current user's DID
-    const myDid = agent.session.did;
-
-    const response = await agent.getAuthorFeed({
-      actor: myDid,
-      limit: 30,
-      cursor: cursor,
-    });
-
-    // Filter posts with images only
-    const postsWithImages = response.data.feed.filter((item) =>
-      hasImages(item.post.embed)
-    );
-
-    console.log("My posts with images:", postsWithImages.length);
-
-    return {
-      posts: postsWithImages,
-      cursor: response.data.cursor,
-    };
-  } catch (error) {
-    console.error("Error fetching my posts:", error);
     throw error;
   }
 };

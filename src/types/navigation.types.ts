@@ -17,6 +17,7 @@ export type BottomTabParamList = {
 export type RootStackParamList = {
   MainTabs: undefined;
   PostDetail: { post: BlueskyPost | BlueskyFeedItem };
+  Profile: { handle: string } | undefined;
 };
 
 // Home Stack params

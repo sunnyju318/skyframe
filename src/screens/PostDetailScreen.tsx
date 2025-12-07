@@ -197,7 +197,12 @@ export default function PostDetailScreen() {
 
         {/* Profile Header */}
         <View className="flex-row items-center justify-between px-16 py-12 pt-70">
-          <View className="flex-row items-center flex-1">
+          <TouchableOpacity
+            className="flex-row items-center flex-1"
+            onPress={() =>
+              navigation.push("Profile", { handle: author.handle })
+            }
+          >
             {/* Avatar */}
             <Image
               source={{
@@ -215,7 +220,7 @@ export default function PostDetailScreen() {
                 @{author.handle}
               </Text>
             </View>
-          </View>
+          </TouchableOpacity>
 
           {/* Follow Button */}
           <TouchableOpacity
@@ -379,14 +384,9 @@ export default function PostDetailScreen() {
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={{
-            backgroundColor: "rgba(255, 255, 255, 0.9)",
-            borderRadius: 50,
+            backgroundColor: "rgb(255, 255, 255)",
+            borderRadius: 12,
             padding: 8,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 4,
-            elevation: 3,
           }}
         >
           <Feather name="chevron-left" size={28} color="#343434" />
