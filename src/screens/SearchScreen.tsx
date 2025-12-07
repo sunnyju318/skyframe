@@ -3,6 +3,7 @@
 // ============================================================================
 
 import React, { useState, useEffect } from "react";
+import { useNavigation } from "@react-navigation/native";
 import {
   View,
   Text,
@@ -21,12 +22,14 @@ import {
 } from "../services/blueskyApi";
 import { BlueskyPost } from "../types";
 import PostCard from "../components/PostCard";
+import { filterPosts, filterHashtags } from "../utils/contentFilter";
 
 // ============================================================================
 // Component State & Mode
 // ============================================================================
 
 export default function SearchScreen() {
+  const navigation = useNavigation<any>();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchMode, setSearchMode] = useState<"discover" | "results">(
     "discover"
@@ -59,7 +62,8 @@ export default function SearchScreen() {
   const loadTrendingTags = async () => {
     try {
       const tags = await getTrendingHashtags();
-      setTrendingTags(tags);
+      const safeTags = filterHashtags(tags);
+      setTrendingTags(safeTags);
     } catch (error) {
       console.error("Error loading trending tags:", error);
     }
@@ -75,11 +79,13 @@ export default function SearchScreen() {
 
     try {
       const popularCategories = await getPopularCategories();
-      setCategories(popularCategories);
+      const safeCategories = filterHashtags(popularCategories);
+      setCategories(safeCategories);
 
-      const searchPromises = popularCategories.map(async (category) => {
+      const searchPromises = safeCategories.map(async (category) => {
         const response = await searchPosts(category);
-        return { category, posts: response.posts.slice(0, 7) };
+        const safePosts = filterPosts(response.posts);
+        return { category, posts: safePosts.slice(0, 7) };
       });
 
       const results = await Promise.all(searchPromises);
@@ -141,10 +147,11 @@ export default function SearchScreen() {
 
     try {
       const response = await searchPosts(query);
-      setSearchResults(response.posts);
+      const safePosts = filterPosts(response.posts);
+      setSearchResults(safePosts);
       setCursor(response.cursor);
 
-      extractRelatedTags(response.posts);
+      extractRelatedTags(safePosts);
     } catch (error: any) {
       console.error("Search error:", error);
     } finally {
@@ -163,8 +170,9 @@ export default function SearchScreen() {
 
     try {
       const response = await searchPosts(searchQuery, cursor);
+      const safePosts = filterPosts(response.posts);
 
-      const newPosts = response.posts.filter(
+      const newPosts = safePosts.filter(
         (newPost) =>
           !searchResults.some(
             (existingPost) => existingPost.uri === newPost.uri
@@ -228,7 +236,7 @@ export default function SearchScreen() {
           <View className="flex-1 flex-row items-center bg-gray-100 rounded-30 px-16 py-8">
             <TextInput
               className="flex-1 text-body font-semibold text-gray-700"
-              placeholder="What's on your mind?'"
+              placeholder="What's on your mind?"
               placeholderTextColor="#9CA3AF"
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -348,6 +356,7 @@ export default function SearchScreen() {
                         className="bg-white rounded-xl overflow-hidden"
                         style={{ width: 109, height: 146 }}
                         activeOpacity={0.9}
+                        onPress={() => navigation.push("PostDetail", { post })}
                       >
                         <Image
                           source={{ uri: image.thumb }}

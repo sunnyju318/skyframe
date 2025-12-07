@@ -1,5 +1,16 @@
 // Bluesky API response types
 
+// ============================================================================
+// Content Moderation
+// ============================================================================
+export interface BlueskyLabel {
+  val: string; // Label value (e.g., "porn", "sexual", "nudity")
+  src?: string; // Source of the label
+  uri?: string; // URI of the labeled content
+  cid?: string; // CID of the labeled content
+  cts?: string; // Created timestamp
+}
+
 export interface BlueskyViewer {
   following?: string; // Follow record URI if following
   followedBy?: string; // Follow record URI if followed by this user
@@ -60,14 +71,16 @@ export interface BlueskyRecord {
 
 export interface BlueskyPost {
   uri: string;
-  cid?: string;
+  cid: string;
   author: BlueskyAuthor;
   record: BlueskyRecord;
   embed?: BlueskyEmbed;
   replyCount?: number;
   repostCount?: number;
   likeCount?: number;
-  indexedAt?: string;
+  indexedAt: string;
+  viewer?: BlueskyViewer;
+  labels?: BlueskyLabel[]; // Content moderation labels
 }
 
 export interface BlueskyFeedItem {
