@@ -31,16 +31,25 @@ export default function HomeScreen() {
 
   const loadFeed = async () => {
     try {
-      // Load different feed based on active tab
       const response =
         activeTab === "discover"
           ? await getDiscoverFeed()
           : await getTimelineFeed();
 
-      setPosts(response.feed);
-      setCursor(response.cursor);
+      // 빈 응답 체크
+      if (!response.feed || response.feed.length === 0) {
+        setPosts([]);
+        setCursor(undefined);
+        console.log("No posts available in this feed");
+      } else {
+        setPosts(response.feed);
+        setCursor(response.cursor);
+      }
     } catch (error: any) {
-      Alert.alert("Error", error.message || "Failed to load feed");
+      console.error("Error loading feed:", error);
+      Alert.alert("Error", "Failed to load feed. Please try again.");
+      setPosts([]); // ← 에러 시 빈 배열
+      setCursor(undefined); // ← cursor 제거
     } finally {
       setLoading(false);
     }
@@ -57,6 +66,14 @@ export default function HomeScreen() {
           ? await getDiscoverFeed(cursor)
           : await getTimelineFeed(cursor);
 
+      // 빈 응답 체크
+      if (!response || !response.feed || response.feed.length === 0) {
+        console.log("No more posts available");
+        setCursor(undefined);
+        return; // ← early return
+      }
+
+      // 중복 제거
       const newPosts = response.feed.filter(
         (newPost) =>
           !posts.some(
@@ -68,6 +85,8 @@ export default function HomeScreen() {
       setCursor(response.cursor);
     } catch (error: any) {
       console.error("Error loading more:", error);
+      setCursor(undefined);
+      // Alert 제거 - 조용히 실패
     } finally {
       setLoadingMore(false);
     }
