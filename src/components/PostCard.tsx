@@ -1,0 +1,131 @@
+// Reusable post card component with image loading
+import { LinearGradient } from "expo-linear-gradient";
+import React, { useState, useEffect, useRef } from "react";
+import { View, TouchableOpacity, Animated, StyleSheet } from "react-native";
+import { Image as ExpoImage } from "expo-image";
+import { BlueskyFeedItem } from "../types";
+
+interface PostCardProps {
+  feedItem: BlueskyFeedItem;
+  isLeftColumn: boolean;
+  onPress?: () => void;
+}
+
+export default function PostCard({
+  feedItem,
+  isLeftColumn,
+  onPress,
+}: PostCardProps) {
+  const [imageLoading, setImageLoading] = useState(true);
+  const shimmerAnimation = useRef(new Animated.Value(0)).current;
+
+  // Shimmer animation
+  useEffect(() => {
+    if (!imageLoading) return;
+
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(shimmerAnimation, {
+          toValue: 1,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(shimmerAnimation, {
+          toValue: 0,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    loop.start();
+
+    return () => {
+      loop.stop();
+    };
+  }, [imageLoading, shimmerAnimation]);
+
+  const translateX = shimmerAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-300, 300],
+  });
+
+  const embed = feedItem.post.embed;
+  if (
+    !embed ||
+    !("images" in embed) ||
+    !embed.images ||
+    embed.images.length === 0
+  ) {
+    // Return an empty view instead of null (prevents type errors)
+    return <View />;
+  }
+
+  const image = embed.images[0];
+  if (!image) return <View />;
+
+  const aspectRatio =
+    image.aspectRatio?.width && image.aspectRatio?.height
+      ? image.aspectRatio.width / image.aspectRatio.height
+      : 1;
+
+  return (
+    <TouchableOpacity
+      className="bg-white rounded-xl overflow-hidden"
+      style={{
+        marginBottom: 16,
+        marginRight: isLeftColumn ? 8 : 0,
+        marginLeft: isLeftColumn ? 0 : 8,
+      }}
+      activeOpacity={0.9}
+      onPress={onPress}
+    >
+      {/* Container wrapping both the image and the skeleton loader */}
+      <View
+        style={{
+          aspectRatio,
+          minHeight: 200,
+        }}
+      >
+        {/* Skeleton Loader with Shimmer */}
+        {imageLoading && (
+          <View
+            style={[
+              StyleSheet.absoluteFillObject,
+              {
+                backgroundColor: "#E5E5E5",
+                overflow: "hidden",
+              },
+            ]}
+          >
+            <Animated.View
+              style={{
+                position: "absolute",
+                top: 0,
+                bottom: 0,
+                width: "60%",
+                transform: [{ translateX }],
+              }}
+            >
+              <LinearGradient
+                colors={["#D6D6D6", "#E6E6E6", "#D6D6D6"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={{ flex: 1 }}
+              />
+            </Animated.View>
+          </View>
+        )}
+
+        {/* Actual Image */}
+        <ExpoImage
+          source={{ uri: image.thumb }}
+          style={StyleSheet.absoluteFillObject}
+          contentFit="cover"
+          transition={200}
+          onLoad={() => setImageLoading(false)}
+        />
+      </View>
+    </TouchableOpacity>
+  );
+}

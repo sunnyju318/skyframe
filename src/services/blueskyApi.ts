@@ -14,14 +14,17 @@ function hasImages(embed: any): embed is BlueskyImageEmbed {
 }
 
 // Get timeline feed
-export const getTimelineFeed = async (): Promise<BlueskyFeedItem[]> => {
+export const getTimelineFeed = async (
+  cursor?: string
+): Promise<{ feed: BlueskyFeedItem[]; cursor?: string }> => {
   try {
     if (!agent.session) {
       throw new Error("Not authenticated. Please login first.");
     }
 
     const response = await agent.getTimeline({
-      limit: 100,
+      limit: 30,
+      cursor: cursor,
     });
 
     // Filter posts with images only
@@ -30,9 +33,45 @@ export const getTimelineFeed = async (): Promise<BlueskyFeedItem[]> => {
     );
 
     console.log("Posts with images:", postsWithImages.length);
-    return postsWithImages;
+
+    return {
+      feed: postsWithImages,
+      cursor: response.data.cursor,
+    };
   } catch (error) {
     console.error("Error fetching timeline:", error);
+    throw error;
+  }
+};
+
+// Get discover/popular feed
+export const getDiscoverFeed = async (
+  cursor?: string
+): Promise<{ feed: BlueskyFeedItem[]; cursor?: string }> => {
+  try {
+    if (!agent.session) {
+      throw new Error("Not authenticated. Please login first.");
+    }
+
+    const response = await agent.app.bsky.feed.getFeed({
+      feed: "at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/whats-hot",
+      limit: 30,
+      cursor: cursor,
+    });
+
+    // Filter posts with images only
+    const postsWithImages = response.data.feed.filter((item) =>
+      hasImages(item.post.embed)
+    );
+
+    console.log("Discover posts with images:", postsWithImages.length);
+
+    return {
+      feed: postsWithImages,
+      cursor: response.data.cursor,
+    };
+  } catch (error) {
+    console.error("Error fetching discover feed:", error);
     throw error;
   }
 };
