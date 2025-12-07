@@ -11,7 +11,9 @@ import {
   Image,
   TouchableOpacity,
 } from "react-native";
-import { getNotifications } from "../services/blueskyApi";
+import { getNotifications, getPost } from "../services/blueskyApi";
+import { useInteraction } from "../contexts/InteractionContext";
+import { useNavigation } from "@react-navigation/native";
 
 // ============================================================================
 // Component
@@ -21,12 +23,18 @@ export default function InboxScreen() {
   // --------------------------------------------------------------------------
   // State
   // --------------------------------------------------------------------------
+  const navigation = useNavigation<any>();
+  const { followUser, unfollowUser, isFollowing, setFollowState } =
+    useInteraction();
+
   const [notifications, setNotifications] = useState<any[]>([]);
+  const [postData, setPostData] = useState<Map<string, any>>(new Map());
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<"all" | "board">("all");
   const [cursor, setCursor] = useState<string | undefined>(undefined);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [followingDid, setFollowingDid] = useState<string | null>(null);
 
   // ========================================================================
   // Initial load / tab change
@@ -45,6 +53,41 @@ export default function InboxScreen() {
       const response = await getNotifications();
       setNotifications(response.notifications);
       setCursor(response.cursor);
+
+      // Fetch post data for like/repost/reply notifications
+      const postUris: string[] = [];
+      response.notifications.forEach((notif: any) => {
+        if (
+          (notif.reason === "like" ||
+            notif.reason === "repost" ||
+            notif.reason === "reply") &&
+          notif.record?.subject?.uri
+        ) {
+          postUris.push(notif.record.subject.uri);
+        }
+      });
+
+      // Fetch all posts in parallel
+      if (postUris.length > 0) {
+        const uniqueUris = [...new Set(postUris)]; // Remove duplicates
+        const postPromises = uniqueUris.map((uri: string) => getPost(uri));
+        const posts = await Promise.all(postPromises);
+
+        const newPostData = new Map(postData);
+        posts.forEach((post: any, index: number) => {
+          if (post) {
+            newPostData.set(uniqueUris[index], post);
+          }
+        });
+        setPostData(newPostData);
+      }
+
+      // Initialize follow states for all notification authors
+      response.notifications.forEach((notif: any) => {
+        if (notif.author?.did && notif.author?.viewer?.following) {
+          setFollowState(notif.author.did, notif.author.viewer.following);
+        }
+      });
     } catch (error: any) {
       console.error("Error loading notifications:", error);
     } finally {
@@ -119,9 +162,15 @@ export default function InboxScreen() {
   // Render single notification row
   // ========================================================================
   const renderNotification = ({ item }: { item: any }) => {
+    if (item.reason === "like" || item.reason === "repost") {
+      console.log("=== FULL NOTIFICATION ===");
+      console.log(JSON.stringify(item, null, 2));
+      console.log("========================");
+    }
+
     const author = item.author;
     const timeAgo = formatTimeAgo(item.indexedAt);
-    const isUnread = !item.isRead;
+    const isUnread = false; // All notifications are marked as read when viewing
 
     // 액션 텍스트
     let actionText = "";
@@ -137,26 +186,81 @@ export default function InboxScreen() {
       item.reason === "repost" ||
       item.reason === "like" ||
       item.reason === "reply";
-    const postImage = item.record?.embed?.images?.[0]?.thumb;
+    // Get post data from Map using subject URI
+    const postUri = item.record?.subject?.uri;
+    const post = postUri ? postData.get(postUri) : null;
+    const postImage = post?.embed?.images?.[0]?.thumb;
+    console.log("Post Image URL:", postImage);
+
+    // Determine navigation target
+    const handleNotificationPress = () => {
+      if (item.reason === "follow") {
+        // Navigate to profile
+        navigation.push("Profile", { handle: author.handle });
+      } else if (
+        item.reason === "like" ||
+        item.reason === "repost" ||
+        item.reason === "reply"
+      ) {
+        // Navigate to post detail
+        const postUri = item.record?.subject?.uri;
+        const post = postUri ? postData.get(postUri) : null;
+        if (post) {
+          navigation.push("PostDetail", { post });
+        }
+      }
+    };
+
+    // Handle follow toggle
+    const handleFollowToggle = async (e: any) => {
+      e.stopPropagation(); // Prevent notification navigation
+
+      if (followingDid || !author.did) return;
+
+      setFollowingDid(author.did);
+      try {
+        if (isFollowing(author.did)) {
+          await unfollowUser(author.did);
+        } else {
+          await followUser(author.did);
+        }
+      } catch (error) {
+        console.error("Error toggling follow:", error);
+      } finally {
+        setFollowingDid(null);
+      }
+    };
 
     return (
-      <View
-        className={`flex-row px-16 py-12 ${
+      <TouchableOpacity
+        className={`flex-row items-center gap-12 px-16 py-12 ${
           isUnread ? "bg-gray-100" : "bg-white"
         }`}
+        onPress={handleNotificationPress}
+        activeOpacity={0.7}
       >
         {/* Avatar */}
-        <Image
-          source={{ uri: author.avatar || "https://via.placeholder.com/48" }}
-          className="w-36 h-36 rounded-full self-center"
-        />
+        <TouchableOpacity
+          onPress={() => navigation.push("Profile", { handle: author.handle })}
+        >
+          <Image
+            source={{ uri: author.avatar || "https://via.placeholder.com/48" }}
+            className="w-36 h-36 rounded-full"
+          />
+        </TouchableOpacity>
 
         {/* Content */}
-        <View className="flex-1 ml-12 justify-center">
+        <View className="flex-1 justify-center">
           {/* Name */}
-          <Text className="text-body font-semibold text-gray-700">
-            {author.displayName || author.handle}
-          </Text>
+          <TouchableOpacity
+            onPress={() =>
+              navigation.push("Profile", { handle: author.handle })
+            }
+          >
+            <Text className="text-body font-semibold text-gray-700">
+              {author.displayName || author.handle}
+            </Text>
+          </TouchableOpacity>
 
           {/* Action + Time */}
           <View className="flex-row items-center mt-4">
@@ -173,27 +277,39 @@ export default function InboxScreen() {
         </View>
 
         {/* Right Element */}
-        {showFollowButton &&
-          (author.viewer?.following ? (
-            <TouchableOpacity className="bg-gray-200 rounded-20 px-16 py-8 self-center">
-              <Text className="text-body-small text-gray-700">Following</Text>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity className="bg-primary-700 rounded-20 px-16 py-8 self-center">
-              <Text className="text-body-small text-white font-semibold">
-                Follow +
+        {showFollowButton && (
+          <TouchableOpacity
+            className={`rounded-20 px-16 py-8 ${
+              isFollowing(author.did) ? "bg-gray-200" : "bg-primary-700"
+            }`}
+            onPress={handleFollowToggle}
+            disabled={followingDid === author.did}
+          >
+            {followingDid === author.did ? (
+              <ActivityIndicator
+                size="small"
+                color={isFollowing(author.did) ? "#343434" : "#FFFFFF"}
+              />
+            ) : (
+              <Text
+                className={`text-body-small font-semibold ${
+                  isFollowing(author.did) ? "text-gray-700" : "text-white"
+                }`}
+              >
+                {isFollowing(author.did) ? "Following" : "Follow +"}
               </Text>
-            </TouchableOpacity>
-          ))}
+            )}
+          </TouchableOpacity>
+        )}
 
         {showPostImage && postImage && (
           <Image
             source={{ uri: postImage }}
-            className="w-48 h-48 rounded-lg self-center"
+            className="w-58 h-58 rounded-20 self-center"
             resizeMode="cover"
           />
         )}
-      </View>
+      </TouchableOpacity>
     );
   };
 

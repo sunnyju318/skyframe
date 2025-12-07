@@ -38,7 +38,7 @@ function hasImages(embed: any): embed is BlueskyImageEmbed {
  */
 export const getTimelineFeed = async (
   cursor?: string
-): Promise<{ feed: BlueskyFeedItem[]; cursor?: string }> => {
+): Promise<{ feed: any[]; cursor?: string }> => {
   try {
     if (!agent.session) {
       throw new Error("Not authenticated. Please login first.");
@@ -76,7 +76,7 @@ export const getTimelineFeed = async (
  */
 export const getDiscoverFeed = async (
   cursor?: string
-): Promise<{ feed: BlueskyFeedItem[]; cursor?: string }> => {
+): Promise<{ feed: any[]; cursor?: string }> => {
   try {
     if (!agent.session) {
       throw new Error("Not authenticated. Please login first.");
@@ -115,7 +115,7 @@ export const getDiscoverFeed = async (
 export const searchPosts = async (
   query: string,
   cursor?: string
-): Promise<{ posts: BlueskyPost[]; cursor?: string }> => {
+): Promise<{ posts: any[]; cursor?: string }> => {
   try {
     if (!agent.session) {
       throw new Error("Not authenticated. Please login first.");
@@ -217,7 +217,7 @@ export const getProfile = async (handle: string): Promise<ProfileData> => {
 export const getMyPosts = async (
   cursor?: string
 ): Promise<{
-  posts: BlueskyFeedItem[];
+  posts: any[];
   cursor?: string;
 }> => {
   try {
@@ -258,7 +258,7 @@ export const getUserPosts = async (
   handle: string,
   cursor?: string
 ): Promise<{
-  posts: BlueskyFeedItem[];
+  posts: any[];
   cursor?: string;
 }> => {
   try {
@@ -537,5 +537,27 @@ export const unrepostPost = async (repostUri: string): Promise<void> => {
   } catch (error) {
     console.error("Error unreposting post:", error);
     throw error;
+  }
+};
+
+// ============================================================================
+// Get Single Post by URI
+// ============================================================================
+export const getPost = async (uri: string): Promise<BlueskyPost | null> => {
+  try {
+    if (!agent.session) {
+      throw new Error("Not authenticated. Please login first.");
+    }
+
+    const response = await agent.getPosts({ uris: [uri] });
+
+    if (!response.data.posts || response.data.posts.length === 0) {
+      return null;
+    }
+
+    return response.data.posts[0] as BlueskyPost;
+  } catch (error) {
+    console.error("Error fetching post:", error);
+    return null;
   }
 };
