@@ -24,6 +24,11 @@ import { formatCount } from "../utils/formatters";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { BlueskyFeedItem } from "../types";
 import PostCard from "../components/PostCard";
+import { useBoardContext } from "../contexts/BoardContext";
+import BoardCard from "../components/BoardCard";
+import { supabase } from "../services/supabaseClient";
+import { getPost } from "../services/blueskyApi";
+import { BoardWithPosts, BoardPost } from "../types";
 
 // ============================================================================
 // Component
@@ -33,10 +38,11 @@ export default function ProfileScreen() {
   // --------------------------------------------------------------------------
   // Navigation & Route params
   // --------------------------------------------------------------------------
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const route = useRoute();
   const { followUser, unfollowUser, isFollowing, setFollowState } =
     useInteraction();
+  const { boards } = useBoardContext();
   const handle = (route.params as any)?.handle;
   const isMyProfile = !handle;
   // --------------------------------------------------------------------------
@@ -50,6 +56,7 @@ export default function ProfileScreen() {
   const [cursor, setCursor] = useState<string | undefined>(undefined);
   const [loadingMore, setLoadingMore] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
+  const [visitorBoards, setVisitorBoards] = useState<BoardWithPosts[]>([]);
 
   // --------------------------------------------------------------------------
   // Initial Load
@@ -63,11 +70,16 @@ export default function ProfileScreen() {
   // --------------------------------------------------------------------------
   const loadProfileData = async () => {
     try {
-      // Load profile - conditional based on isMyProfile
+      // Load profile
       const profileData = isMyProfile
         ? await getMyProfile()
         : await getProfile(handle);
       setProfile(profileData);
+
+      // Load visitor's public boards
+      if (!isMyProfile && profileData.did) {
+        await loadVisitorBoards(profileData.did);
+      }
 
       // Set follow state for visiting profile
       if (!isMyProfile && profileData.viewer && profileData.did) {
@@ -86,6 +98,64 @@ export default function ProfileScreen() {
       console.error("Error loading profile:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // --------------------------------------------------------------------------
+  // Load Visitor's Public Boards
+  // --------------------------------------------------------------------------
+  const loadVisitorBoards = async (userDid: string) => {
+    try {
+      // Fetch public boards
+      const { data: boardsData, error: boardsError } = await supabase
+        .from("boards")
+        .select("*")
+        .eq("user_id", userDid)
+        .eq("is_private", false)
+        .order("created_at", { ascending: false });
+
+      if (boardsError) throw boardsError;
+
+      // Fetch board posts
+      const boardIds = boardsData?.map((b) => b.id) || [];
+
+      let boardPostsData: BoardPost[] = [];
+      if (boardIds.length > 0) {
+        const { data, error } = await supabase
+          .from("board_posts")
+          .select("*")
+          .in("board_id", boardIds);
+
+        if (error) throw error;
+        boardPostsData = data || [];
+      }
+
+      // Fetch actual post data from Bluesky
+      const uniqueUris = [...new Set(boardPostsData.map((bp) => bp.post_uri))];
+      const postPromises = uniqueUris.map((uri) => getPost(uri));
+      const postsData = await Promise.all(postPromises);
+
+      const postsMap = new Map<string, any>();
+      postsData.forEach((post, index) => {
+        if (post) {
+          postsMap.set(uniqueUris[index], post);
+        }
+      });
+
+      // Combine boards with posts
+      const boardsWithPosts: BoardWithPosts[] = (boardsData || []).map(
+        (board) => ({
+          ...board,
+          posts: boardPostsData
+            .filter((bp) => bp.board_id === board.id)
+            .map((bp) => postsMap.get(bp.post_uri))
+            .filter((p): p is any => p !== undefined),
+        })
+      );
+
+      setVisitorBoards(boardsWithPosts);
+    } catch (error) {
+      console.error("Error loading visitor boards:", error);
     }
   };
 
@@ -377,15 +447,29 @@ export default function ProfileScreen() {
               />
             </View>
           )
-        ) : (
-          // Boards Empty State
+        ) : // Boards Tab
+        (isMyProfile ? boards : visitorBoards).length === 0 ? (
           <View className="items-center justify-center py-60 px-24">
             <Text className="text-h2 font-semibold text-gray-500">
               No boards yet
             </Text>
             <Text className="text-body text-gray-400 mt-8 text-center">
-              Create boards to organize your saved posts
+              {isMyProfile
+                ? "Create boards to organize your saved posts"
+                : "This user hasn't created any public boards yet"}
             </Text>
+          </View>
+        ) : (
+          <View className="px-16 pt-24 pb-100">
+            {(isMyProfile ? boards : visitorBoards).map((board) => (
+              <BoardCard
+                key={board.id}
+                board={board}
+                onPress={() => {
+                  navigation.navigate("BoardDetail", { board });
+                }}
+              />
+            ))}
           </View>
         )}
       </ScrollView>

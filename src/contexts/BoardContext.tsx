@@ -1,5 +1,5 @@
 // ============================================================================
-// 📌 BoardContext — Global board & saved-post management (Similar to Pinterest)
+// BoardContext — Global board management with Supabase
 // ============================================================================
 
 import React, {
@@ -9,27 +9,11 @@ import React, {
   useEffect,
   ReactNode,
 } from "react";
-import uuid from "react-native-uuid";
-
-// Local storage manager
-import {
-  getBoardData,
-  updateBoardData,
-  addBoard as addBoardToStorage,
-  updateBoard as updateBoardInStorage,
-  deleteBoard as deleteBoardFromStorage,
-  addPostToBoard as addPostToBoardInStorage,
-  removePostFromBoard as removePostFromBoardInStorage,
-} from "../services/BoardManager";
-
-import { Board, BoardContextType, BlueskyPost } from "../types";
-
-// Sample data placeholder (optional)
-const sampleBoards: Board[] = [];
-
-// ============================================================================
-// Context Creation
-// ============================================================================
+import { supabase } from "../services/supabaseClient";
+import { useAuth } from "./AuthContext";
+import { Board, BoardContextType, BoardWithPosts, BoardPost } from "../types";
+import { BlueskyPost } from "../types";
+import { getPost } from "../services/blueskyApi";
 
 const BoardContext = createContext<BoardContextType | undefined>(undefined);
 
@@ -37,177 +21,183 @@ interface BoardProviderProps {
   children: ReactNode;
 }
 
-// ============================================================================
-// Provider Component
-// ============================================================================
-
 export function BoardProvider({ children }: BoardProviderProps) {
-  // Global state
-  const [boards, setBoards] = useState<Board[]>([]);
+  const { user } = useAuth();
+  const [boards, setBoards] = useState<BoardWithPosts[]>([]);
   const [loading, setLoading] = useState(true);
 
   // --------------------------------------------------------------------------
-  // Load boards on mount
+  // Load boards on mount and when user changes
   // --------------------------------------------------------------------------
   useEffect(() => {
-    loadBoards();
-  }, []);
+    if (user?.did) {
+      loadBoards();
+    } else {
+      setBoards([]);
+      setLoading(false);
+    }
+  }, [user?.did]);
 
-  // ========================================================================
-  // Load boards from storage
-  // ========================================================================
+  // --------------------------------------------------------------------------
+  // Load boards from Supabase
+  // --------------------------------------------------------------------------
   const loadBoards = async () => {
+    if (!user?.did) return;
+
     try {
-      const data = await getBoardData();
-      setBoards(data);
+      setLoading(true);
+
+      // Fetch boards
+      const { data: boardsData, error: boardsError } = await supabase
+        .from("boards")
+        .select("*")
+        .eq("user_id", user.did)
+        .order("created_at", { ascending: false });
+
+      if (boardsError) throw boardsError;
+
+      // Fetch board posts
+      const boardIds = boardsData?.map((b) => b.id) || [];
+
+      let boardPostsData: BoardPost[] = [];
+      if (boardIds.length > 0) {
+        const { data, error } = await supabase
+          .from("board_posts")
+          .select("*")
+          .in("board_id", boardIds);
+
+        if (error) throw error;
+        boardPostsData = data || [];
+      }
+
+      // Fetch actual post data from Bluesky
+      const uniqueUris = [...new Set(boardPostsData.map((bp) => bp.post_uri))];
+      const postPromises = uniqueUris.map((uri) => getPost(uri));
+      const postsData = await Promise.all(postPromises);
+
+      const postsMap = new Map<string, BlueskyPost>();
+      postsData.forEach((post, index) => {
+        if (post) {
+          postsMap.set(uniqueUris[index], post);
+        }
+      });
+
+      // Combine boards with posts
+      const boardsWithPosts: BoardWithPosts[] = (boardsData || []).map(
+        (board) => ({
+          ...board,
+          posts: boardPostsData
+            .filter((bp) => bp.board_id === board.id)
+            .map((bp) => postsMap.get(bp.post_uri))
+            .filter((p): p is BlueskyPost => p !== undefined),
+        })
+      );
+
+      setBoards(boardsWithPosts);
     } catch (error) {
-      console.log("loadBoards error:", error);
+      console.error("Error loading boards:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  // ========================================================================
-  // Reset all boards (clear local storage)
-  // ========================================================================
-  const resetBoards = async () => {
-    try {
-      await updateBoardData([]);
-      setBoards([]);
-      console.log("Boards reset successfully");
-    } catch (error) {
-      console.log("resetBoards error:", error);
-    }
-  };
-
-  // ========================================================================
-  // Add sample boards (developer utility)
-  // ========================================================================
-  const populateWithSampleData = async () => {
-    try {
-      await updateBoardData(sampleBoards);
-      setBoards(sampleBoards);
-      console.log("Sample data populated successfully");
-    } catch (error) {
-      console.log("populateWithSampleData error:", error);
-      throw error;
-    }
-  };
-
-  // ========================================================================
+  // --------------------------------------------------------------------------
   // Create a new board
-  // ========================================================================
+  // --------------------------------------------------------------------------
   const createBoard = async (
     title: string,
-    description: string = ""
+    description: string = "",
+    isPrivate: boolean = false
   ): Promise<Board> => {
-    try {
-      const currentBoards = await getBoardData();
+    if (!user?.did) throw new Error("User not authenticated");
 
-      const newBoard: Board = {
-        id: uuid.v4() as string,
+    const { data, error } = await supabase
+      .from("boards")
+      .insert({
+        user_id: user.did,
         title,
         description,
-        posts: [],
-        createdAt: new Date(),
-      };
+        is_private: isPrivate,
+      })
+      .select()
+      .single();
 
-      addBoardToStorage(newBoard, currentBoards);
-      await updateBoardData(currentBoards);
-      setBoards(currentBoards);
+    if (error) throw error;
 
-      return newBoard;
-    } catch (error) {
-      console.log("createBoard error:", error);
-      throw error;
-    }
+    await loadBoards();
+    return data;
   };
 
-  // ========================================================================
-  // Update board info (title, description, etc.)
-  // ========================================================================
+  // --------------------------------------------------------------------------
+  // Update board
+  // --------------------------------------------------------------------------
   const updateBoard = async (
     boardId: string,
     updates: Partial<Board>
   ): Promise<Board | undefined> => {
-    try {
-      const currentBoards = await getBoardData();
-      const index = currentBoards.findIndex((b) => b.id === boardId);
+    const { data, error } = await supabase
+      .from("boards")
+      .update(updates)
+      .eq("id", boardId)
+      .select()
+      .single();
 
-      if (index !== -1) {
-        const updatedBoard = {
-          ...currentBoards[index],
-          ...updates,
-        };
+    if (error) throw error;
 
-        updateBoardInStorage(updatedBoard, currentBoards);
-        await updateBoardData(currentBoards);
-        setBoards(currentBoards);
-
-        return updatedBoard;
-      }
-    } catch (error) {
-      console.log("updateBoard error:", error);
-      throw error;
-    }
+    await loadBoards();
+    return data;
   };
 
-  // ========================================================================
-  // Delete a board
-  // ========================================================================
+  // --------------------------------------------------------------------------
+  // Delete board
+  // --------------------------------------------------------------------------
   const deleteBoard = async (boardId: string): Promise<void> => {
-    try {
-      const currentBoards = await getBoardData();
-      const filtered = deleteBoardFromStorage(boardId, currentBoards);
-      await updateBoardData(filtered);
-      setBoards(filtered);
-    } catch (error) {
-      console.log("deleteBoard error:", error);
-      throw error;
-    }
+    const { error } = await supabase.from("boards").delete().eq("id", boardId);
+
+    if (error) throw error;
+
+    await loadBoards();
   };
 
-  // ========================================================================
-  // Save a post into a board
-  // ========================================================================
+  // --------------------------------------------------------------------------
+  // Save post to board
+  // --------------------------------------------------------------------------
   const savePostToBoard = async (
     boardId: string,
     post: BlueskyPost
   ): Promise<void> => {
-    try {
-      const currentBoards = await getBoardData();
-      addPostToBoardInStorage(boardId, post, currentBoards);
-      await updateBoardData(currentBoards);
-      setBoards(currentBoards);
-    } catch (error) {
-      console.log("savePostToBoard error:", error);
-      throw error;
-    }
+    const { error } = await supabase.from("board_posts").insert({
+      board_id: boardId,
+      post_uri: post.uri,
+    });
+
+    if (error) throw error;
+
+    await loadBoards();
   };
 
-  // ========================================================================
-  // Remove a post from a board
-  // ========================================================================
+  // --------------------------------------------------------------------------
+  // Remove post from board
+  // --------------------------------------------------------------------------
   const removePostFromBoard = async (
     boardId: string,
     postUri: string
   ): Promise<void> => {
-    try {
-      const currentBoards = await getBoardData();
-      removePostFromBoardInStorage(boardId, postUri, currentBoards);
-      await updateBoardData(currentBoards);
-      setBoards(currentBoards);
-    } catch (error) {
-      console.log("removePostFromBoard error:", error);
-      throw error;
-    }
+    const { error } = await supabase
+      .from("board_posts")
+      .delete()
+      .eq("board_id", boardId)
+      .eq("post_uri", postUri);
+
+    if (error) throw error;
+
+    await loadBoards();
   };
 
-  // ========================================================================
-  // Helpers: find board / count / boards containing a post
-  // ========================================================================
-
-  const getBoardById = (boardId: string): Board | undefined => {
+  // --------------------------------------------------------------------------
+  // Helper functions
+  // --------------------------------------------------------------------------
+  const getBoardById = (boardId: string): BoardWithPosts | undefined => {
     return boards.find((board) => board.id === boardId);
   };
 
@@ -215,15 +205,15 @@ export function BoardProvider({ children }: BoardProviderProps) {
     return boards.length;
   };
 
-  const getBoardsWithPost = (postUri: string): Board[] => {
+  const getBoardsWithPost = (postUri: string): BoardWithPosts[] => {
     return boards.filter((board) =>
       board.posts.some((post) => post.uri === postUri)
     );
   };
 
-  // ========================================================================
-  // Exported context value
-  // ========================================================================
+  // --------------------------------------------------------------------------
+  // Context value
+  // --------------------------------------------------------------------------
   const value: BoardContextType = {
     boards,
     loading,
@@ -236,18 +226,12 @@ export function BoardProvider({ children }: BoardProviderProps) {
     getBoardById,
     getBoardCount,
     getBoardsWithPost,
-    resetBoards,
-    populateWithSampleData,
   };
 
   return (
     <BoardContext.Provider value={value}>{children}</BoardContext.Provider>
   );
 }
-
-// ============================================================================
-// Hook — useBoardContext()
-// ============================================================================
 
 export function useBoardContext(): BoardContextType {
   const context = useContext(BoardContext);

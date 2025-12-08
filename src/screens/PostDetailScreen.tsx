@@ -20,6 +20,7 @@ import { searchPosts, getDiscoverFeed } from "../services/blueskyApi";
 import { useInteraction } from "../contexts/InteractionContext";
 import PostCard from "../components/PostCard";
 import { formatCount } from "../utils/formatters";
+import SavePostModal from "../components/SavePostModal";
 
 const { width } = Dimensions.get("window");
 
@@ -64,6 +65,7 @@ export default function PostDetailScreen() {
     undefined
   );
   const [loadingMoreRelated, setLoadingMoreRelated] = useState(false);
+  const [showSaveModal, setShowSaveModal] = useState(false);
 
   // --------------------------------------------------------------------------
   // Load related posts based on hashtags
@@ -448,7 +450,10 @@ export default function PostDetailScreen() {
           </View>
 
           {/* Save Button */}
-          <TouchableOpacity className="bg-primary-900 rounded-20 px-24 py-8">
+          <TouchableOpacity
+            className="bg-primary-900 rounded-20 px-24 py-8"
+            onPress={() => setShowSaveModal(true)}
+          >
             <Text className="text-body font-body text-white">Save</Text>
           </TouchableOpacity>
         </View>
@@ -541,6 +546,13 @@ export default function PostDetailScreen() {
           )}
         </View>
       </ScrollView>
+
+      {/* Save Post Modal */}
+      <SavePostModal
+        visible={showSaveModal}
+        onClose={() => setShowSaveModal(false)}
+        post={postData}
+      />
 
       {/* Fixed Back Button */}
       <View className="absolute top-58 left-20 z-10">
