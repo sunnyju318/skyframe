@@ -17,6 +17,8 @@ import { useRoute, useNavigation } from "@react-navigation/native";
 import { BoardWithPosts } from "../types";
 import { useAuth } from "../contexts/AuthContext";
 import PostCard from "../components/PostCard";
+import EditBoardModal from "../components/EditBoardModal";
+import DeleteBoardModal from "../components/DeleteBoardModal";
 
 export default function BoardDetailScreen() {
   // --------------------------------------------------------------------------
@@ -31,11 +33,26 @@ export default function BoardDetailScreen() {
   const isMyBoard = user?.did === board.user_id;
 
   // --------------------------------------------------------------------------
+  // State
+  // --------------------------------------------------------------------------
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  // --------------------------------------------------------------------------
   // Get unique authors
   // --------------------------------------------------------------------------
   const authors = Array.from(
     new Map(board.posts.map((post) => [post.author.did, post.author])).values()
   ).slice(0, 10); // Show max 10 authors
+
+  // --------------------------------------------------------------------------
+  // Handle delete success
+  // --------------------------------------------------------------------------
+  const handleDeleteSuccess = () => {
+    setShowDeleteModal(false);
+    setShowEditModal(false);
+    navigation.goBack(); // Go back to profile
+  };
 
   // --------------------------------------------------------------------------
   // Render
@@ -144,9 +161,7 @@ export default function BoardDetailScreen() {
             <TouchableOpacity
               className="bg-primary-900 rounded-xl px-16"
               style={{ height: 32 }}
-              onPress={() => {
-                console.log("Edit board");
-              }}
+              onPress={() => setShowEditModal(true)}
             >
               <View className="flex-1 items-center justify-center">
                 <Text className="text-body font-body text-white">Edit</Text>
@@ -166,6 +181,25 @@ export default function BoardDetailScreen() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Edit Board Modal */}
+      <EditBoardModal
+        visible={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        board={board}
+        onDelete={() => {
+          setShowEditModal(false);
+          setShowDeleteModal(true);
+        }}
+      />
+
+      {/* Delete Board Modal */}
+      <DeleteBoardModal
+        visible={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        board={board}
+        onSuccess={handleDeleteSuccess}
+      />
     </View>
   );
 }
